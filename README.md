@@ -155,16 +155,16 @@ Project Link: [https://github.com/joepearson95/demdetect](https://github.com/joe
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/joepearson95/repo.svg?style=flat-square
-[contributors-url]: https://github.com/joepearson95/repo/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/joepearson95/repo.svg?style=flat-square
-[forks-url]: https://github.com/joepearson95/repo/network/members
-[stars-shield]: https://img.shields.io/github/stars/joepearson95/repo.svg?style=flat-square
-[stars-url]: https://github.com/joepearson95/repo/stargazers
-[issues-shield]: https://img.shields.io/github/issues/joepearson95/repo.svg?style=flat-square
-[issues-url]: https://github.com/joepearson95/repo/issues
-[license-shield]: https://img.shields.io/github/license/joepearson95/repo.svg?style=flat-square
-[license-url]: https://github.com/joepearson95/repo/blob/master/LICENSE.txt
+[contributors-shield]: https://img.shields.io/github/contributors/joepearson95/demdetect.svg?style=flat-square
+[contributors-url]: https://github.com/joepearson95/demdetect/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/joepearson95/demdetect.svg?style=flat-square
+[forks-url]: https://github.com/joepearson95/demdetect/network/members
+[stars-shield]: https://img.shields.io/github/stars/joepearson95/demdetect.svg?style=flat-square
+[stars-url]: https://github.com/joepearson95/demdetect/stargazers
+[issues-shield]: https://img.shields.io/github/issues/joepearson95/demdetect.svg?style=flat-square
+[issues-url]: https://github.com/joepearson95/demdetect/issues
+[license-shield]: https://img.shields.io/github/license/joepearson95/demdetect.svg?style=flat-square
+[license-url]: https://github.com/joepearson95/demdetect/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/joepearson95
 [product-screenshot]: images/screenshot.png
