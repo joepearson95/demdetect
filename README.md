@@ -18,7 +18,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <a href="https://github.com/github_username/repo_name">
+  <a href="https://github.com/github_username/demdetect">
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
@@ -59,7 +59,7 @@
 
 Here's a blank template to get started:
 **To avoid retyping too much info. Do a search and replace with your text editor for the following:**
-`github_username`, `repo_name`, `twitter_handle`, `email`
+`joepearson95`, `demdetect`, `Joe_Pearsonn95`, `joe.c.pearson95@gmail.com`
 
 
 ### Built With
@@ -136,7 +136,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Joe Pearson - [@twitter_handle](https://twitter.com/Joe_Pearsonn95) - joe.c.pearson95@gmail.com
+Joe Pearson - [@Joe_Pearsonn95](https://twitter.com/Joe_Pearsonn95) - joe.c.pearson95@gmail.com
 
 Project Link: [https://github.com/joepearson95/demdetect](https://github.com/joepearson95/demdetect)
 
