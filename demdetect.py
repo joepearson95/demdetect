@@ -22,16 +22,25 @@ cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Keypoints/keypoint_rcnn_R
 # Predictor created
 predictor = DefaultPredictor(cfg)
 outputs = predictor(im)
-
-# Map keypoints to image
 v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
 out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
 
-# Get keypoints and create dataframe before passing to csv
+# Obtain just the keypoints and make a flat list for the dataset
 output = outputs['instances'].pred_keypoints.to("cpu")
-create_keypoint_dataset = pd.DataFrame(output.tolist())
-#print(create_keypoint_dataset)
-create_keypoint_dataset.to_csv('keypoints.csv')
+listed = output.tolist()
+flattened =  sum(sum(listed,[]), [])
+create_keypoint_dataset = pd.DataFrame(flattened).T
+
+# Add column names dynamically
+col_names = []
+for x in range(19):
+    col_names.append("point_" + str(x) + "_x")
+    col_names.append("point_" + str(x) + "_y")
+    col_names.append("point_" + str(x) + "_score")
+
+# create_keypoint_dataset.columns = col_names
+print(create_keypoint_dataset)
+#create_keypoint_dataset.to_csv('keypoints.csv')
 #cv2.imshow('', out.get_image()[:, :, ::-1])
 #cv2.waitKey(0)
 
