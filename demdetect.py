@@ -20,10 +20,17 @@ for x in range(17):
     col_names.append("point_" + str(x) + "_y")
     col_names.append("point_" + str(x) + "_score")
 
+col_names.append("file_name")
 cols = pd.DataFrame(col_names)
 cols = cols.T
 create_keypoint_dataset = pd.DataFrame()
 create_keypoint_dataset = create_keypoint_dataset.append(col_names).T
+
+# Firstly, get the total number
+total = 0
+for filename in glob.iglob('*.jpeg', recursive=True):
+    if "GIF" in filename or "RGB" in filename:
+        total += 1
 num = 0
 # Loop through all 'valid' photos
 for filename in glob.iglob('*.jpeg', recursive=True):
@@ -42,16 +49,19 @@ for filename in glob.iglob('*.jpeg', recursive=True):
         # Predictor created
         predictor = DefaultPredictor(cfg)
         outputs = predictor(im)
-# #     # v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
-# #     # out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+#     # v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
+#     # out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
 
         # Obtain just the keypoints and make a flat list for the dataset
-        output = outputs['instances'].pred_keypoints.to("cpu")
+        output = outputs['instances'].pred_keypoints.to("cuda")
         listed = output.tolist()
         flattened =  sum(sum(listed,[]), [])
+        flattened.append(filename)
         create_keypoint_dataset = create_keypoint_dataset.append(pd.DataFrame(flattened).T)
-        print(num)
-# # Comment out when testing
+        print(str(num) + "/" + str(total))
+
+# print(create_keypoint_dataset)
+# Comment out when testing
 if os.path.exists("keypoints.csv") == False:
     create_keypoint_dataset.to_csv('keypoints.csv', mode='a',index=False, header=False)
 else:
