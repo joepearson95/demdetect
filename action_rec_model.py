@@ -7,9 +7,6 @@ import pandas as pd
 import numpy as np
 import os
 
-# Device configuration
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-csv_name = '#'
 # Dataset creation of the above csv file
 class DemDataset(Dataset):
     # read the csv in but not the images for efficiency
@@ -37,64 +34,92 @@ class DemDataset(Dataset):
 
         return [img_name, keypoints]
 
-dem_dataset = DemDataset(csv_name)
-# Hyper-parameters 
-# num_classes = 10
-# num_epochs = 2
-# batch_size = 100
-# learning_rate = 0.001
+#dem_dataset = DemDataset(csv_name)
 
-# input_size = 28
-# sequence_length = 28
-# hidden_size = 128
-# num_layers = 2
-
-# # MNIST dataset 
-# train_dataset = torchvision.datasets.MNIST(root='./data', 
-#                                            train=True, 
-#                                            transform=transforms.ToTensor(),  
-#                                            download=True)
-
-# test_dataset = torchvision.datasets.MNIST(root='./data', 
-#                                           train=False, 
-#                                           transform=transforms.ToTensor())
-
-# # Data loader
-# train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
-#                                            batch_size=batch_size, 
-#                                            shuffle=True)
-
-# test_loader = torch.utils.data.DataLoader(dataset=test_dataset, 
-#                                           batch_size=batch_size, 
-#                                           shuffle=False)
-
-
-# # Fully connected neural network with one hidden layer
-# class RNN(nn.Module):
-#     def __init__(self, input_size, hidden_size, num_layers, num_classes):
-#         super(RNN, self).__init__()
-#         self.num_layers = num_layers
-#         self.hidden_size = hidden_size
-#         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-#         self.fc = nn.Linear(hidden_size, num_classes)
+# LSTM model to classify the actions
+class RNN(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes):
+        super(RNN, self).__init__()
+        self.num_layers = num_layers
+        self.hidden_size = hidden_size
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, num_classes)
         
-#     def forward(self, x):
-#         # Set initial hidden states (and cell states for LSTM)
-#         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
-#         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
+    def forward(self, x):
+        # Set initial hidden states (and cell states for LSTM)
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
 
-#         # Forward propagate RNN
-#         out, _ = self.lstm(x, (h0,c0))  
+        # Forward propagate RNN
+        out, _ = self.lstm(x, (h0,c0))  
 
-#         # Decode the hidden state of the last time step
-#         out = out[:, -1, :]
+        # Decode the hidden state of the last time step
+        out = out[:, -1, :]
          
-#         out = self.fc(out)
-#         return out
+        out = self.fc(out)
+        return out
 
-# model = RNN(input_size, hidden_size, num_layers, num_classes).to(device)
+#action_model = RNN(input_size, hidden_size, num_layers, num_classes).to(device)
 
-# # Loss and optimizer
+# Hyper-parameters 
+csv_name = '#'
+sequence_length = 28
+
+
+def train_model(csv_file, num_epochs):
+    # Load in the required dataset
+    demdataset = DemDataset(csv_name)
+
+    # split into the right sets
+    # MAYBE CHANGE THIS TO A NICER LOOKING ONE?
+    train_size = int(0.8 * len(demdataset))
+    test_size = len(demdataset) - train_size
+    trainset, testset = random_split(dataset, [train_size, test_size])
+
+    # Create the dataloader
+    training_loader = DataLoader(trainset, batch_size=100, shuffle=True)
+    testing_loader = DataLoader(testset, batch_size=100, shuffle=True)
+
+    # GPU if applicable
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+    # Hyperparam
+    input_size = 28
+    hidden_size = 15
+    num_layers = 2
+    num_classes = 4
+    learning_rate = 0.0001
+    num_epochs = 2
+
+    # Model
+    action_model = RNN(input_size, hidden_size, num_layers, num_classes)
+
+    # Loss
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(action_model.parameters(), lr=learning_rate)
+
+    # Begin training
+    # loss_iter = []
+    # loss_batch = []
+    iter = 0
+    for epoch in range(num_epochs):
+        correct = 0
+        for i, (inputs, labels) in enumerate(training_loader):
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            optimizer.zero_grad()
+
+            outputs = action_model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            correct += (outputs == labels).float().sum()
+        print(100 * correct / len(trainset))
+        if epoch%25  == 1:
+            print(f'epoch: {i:3} loss: {loss.item():10.8f}')
+            
+# Loss and optimizer
 # criterion = nn.CrossEntropyLoss()
 # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)  
 
