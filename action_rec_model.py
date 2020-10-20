@@ -11,28 +11,22 @@ import math
 # GPU if applicable
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-class RNN(nn.Module):
+class LSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
-        super(RNN, self).__init__()
+        super(LSTM, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(input_size,hidden_size, num_layers, batch_first=True)
         self.fc = nn.Linear(hidden_size, num_classes)
-        
     def forward(self, x):
-        # Set initial hidden states (and cell states for LSTM)
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
-
-        # Forward propagate RNN
-        out, _ = self.lstm(x, (h0,c0))  
-
-        # Decode the hidden state of the last time step
+        # hidden state and cell state
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
+        
+        out, _ = self.lstm(x, (h0, c0))
         out = out[:, -1, :]
-         
         out = self.fc(out)
         return out
-
 
 class DemDataset(Dataset):
     def __init__(self, csv_file):
@@ -55,29 +49,43 @@ train_size = int(0.8 * len(demdataset))
 test_size = len(demdataset) - train_size
 trainset, testset = random_split(demdataset, [train_size, test_size])
 
-# Hyperparams
+input_size = 51
+sequence_length = 1
 batch_size = 4
-no_workers = 2
+hidden_size = 100
+num_layers = 1
+num_classes = 4
 no_epochs = 2
-total_num_samp = len(demdataset)
-no_iters = math.ceil(total_num_samp / batch_size)
+lr_rate = 0.001
 
 # Create the dataloader
-training_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=no_workers)
-# testing_loader = DataLoader(testset, batch_size=100, shuffle=True)
+training_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
+testing_loader = DataLoader(testset, batch_size=100, shuffle=True)
+demdetect = LSTM(input_size, hidden_size, num_layers, num_classes).to(device)
+# batch of 4
+#torch.Size([4, 51]) torch.Size([4, 4])
+# inputs, classes = next(iter(training_loader))  
+# inputs = inputs.reshape(inputs.shape[0], 1, inputs.shape[1])
+# print(inputs.shape)
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(demdetect.parameters(), lr=lr_rate)
 
+total_steps = len(training_loader)
 for epochs in range(no_epochs):
-    for i, (inputs, labels) in enumerate(training_loader):
-        inputs = inputs.to(device)
+    correct = 0
+    for i, (points, labels) in enumerate(training_loader):
+        points = points.reshape(-1, sequence_length, input_size).to(device)
         labels = labels.to(device)
+        
+        outputs = demdetect(points)
+        loss = criterion(outputs, torch.max(labels,1)[1])
 
         optimizer.zero_grad()
-
-        outputs = action_model(inputs)
-        loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
-        correct += (outputs == labels).float().sum()
-    print(100 * correct / len(trainset))
-    if epoch%25  == 1:
-        print(f'epoch: {i:3} loss: {loss.item():10.8f}')
+        
+        if (i+1) % 100 == 0:
+            print(f'Epoch [{epochs+1}/{no_epochs}], step [{i+1}/{total_steps}], Loss: {loss.item():.4f}')
+    outputs - (outputs>0.5).float()
+    correct = (outputs == labels).float().sum()
+    print("Accuracy: {:.3f}", correct/outputs.shape[0])
