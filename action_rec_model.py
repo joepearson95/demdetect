@@ -49,14 +49,14 @@ train_size = int(0.8 * len(demdataset))
 test_size = len(demdataset) - train_size
 trainset, testset = random_split(demdataset, [train_size, test_size])
 
-input_size = 51
+input_size = 52
 sequence_length = 1
 batch_size = 4
-hidden_size = 100
-num_layers = 1
+hidden_size = 200
+num_layers = 2
 num_classes = 4
-no_epochs = 2
-lr_rate = 0.001
+no_epochs = 6
+lr_rate = 0.0001
 
 # Create the dataloader
 training_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
@@ -76,16 +76,14 @@ for epochs in range(no_epochs):
     for i, (points, labels) in enumerate(training_loader):
         points = points.reshape(-1, sequence_length, input_size).to(device)
         labels = labels.to(device)
+
+        optimizer.zero_grad()
         
         outputs = demdetect(points)
         loss = criterion(outputs, torch.max(labels,1)[1])
-
-        optimizer.zero_grad()
         loss.backward()
-        optimizer.step()
-        
+        optimizer.step()    
         if (i+1) % 100 == 0:
-            print(f'Epoch [{epochs+1}/{no_epochs}], step [{i+1}/{total_steps}], Loss: {loss.item():.4f}')
-    outputs - (outputs>0.5).float()
-    correct = (outputs == labels).float().sum()
-    print("Accuracy: {:.3f}", correct/outputs.shape[0])
+            outputs = (outputs>0.5).float()
+            correct = (outputs == labels).float().sum()
+            print(f'Epoch [{epochs+1}/{no_epochs}], step [{i+1}/{total_steps}], Loss: {loss.item():.4f}, a: {correct/outputs.shape[0]:.3f}')
