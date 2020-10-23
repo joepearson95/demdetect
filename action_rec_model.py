@@ -30,15 +30,19 @@ class LSTM(nn.Module):
 
 class DemDataset(Dataset):
     def __init__(self, csv_file):
-        xy = np.loadtxt(csv_file, delimiter=",", dtype=np.float32, skiprows=1)
-        self.x = torch.from_numpy(xy[:, :-4])
-        self.y = torch.from_numpy(xy[:, -4:])
-        self.no_samples = xy.shape[0]
+        self.df = pd.read_csv(csv_file)
+        del self.df['file_name']
     def __len__(self):
-        return self.no_samples
+        return len(self.df)
 
     def __getitem__(self, idx):
-        return self.x[idx], self.y[idx]
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        
+        self.x = torch.Tensor(self.df.iloc[idx,:-4].astype('float64'))
+        self.y = torch.Tensor(self.df.iloc[idx, -4:].astype('float64'))
+
+        return self.x,self.y
         
 # Get the dataset ready
 csv_file = '#'
@@ -49,30 +53,27 @@ train_size = int(0.8 * len(demdataset))
 test_size = len(demdataset) - train_size
 trainset, testset = random_split(demdataset, [train_size, test_size])
 
-input_size = 52
+# Hyper Param
+input_size = 51
 sequence_length = 1
 batch_size = 4
 hidden_size = 200
 num_layers = 2
 num_classes = 4
-no_epochs = 6
+no_epochs = 4
 lr_rate = 0.0001
 
-# Create the dataloader
+# # Create the dataloader
 training_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True)
-testing_loader = DataLoader(testset, batch_size=100, shuffle=True)
+testing_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
 demdetect = LSTM(input_size, hidden_size, num_layers, num_classes).to(device)
-# batch of 4
-#torch.Size([4, 51]) torch.Size([4, 4])
-# inputs, classes = next(iter(training_loader))  
-# inputs = inputs.reshape(inputs.shape[0], 1, inputs.shape[1])
-# print(inputs.shape)
+
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(demdetect.parameters(), lr=lr_rate)
-
-total_steps = len(training_loader)
+demdetect.train()
 for epochs in range(no_epochs):
-    correct = 0
+    ep_loss = 0.0
+    run_loss = 0.0
     for i, (points, labels) in enumerate(training_loader):
         points = points.reshape(-1, sequence_length, input_size).to(device)
         labels = labels.to(device)
@@ -82,8 +83,24 @@ for epochs in range(no_epochs):
         outputs = demdetect(points)
         loss = criterion(outputs, torch.max(labels,1)[1])
         loss.backward()
-        optimizer.step()    
+        optimizer.step()
+        ep_loss += outputs.shape[0]*loss.item()
+        run_loss += loss.item()
         if (i+1) % 100 == 0:
-            outputs = (outputs>0.5).float()
-            correct = (outputs == labels).float().sum()
-            print(f'Epoch [{epochs+1}/{no_epochs}], step [{i+1}/{total_steps}], Loss: {loss.item():.4f}, a: {correct/outputs.shape[0]:.3f}')
+            print('[Epoch %d of %d] Running Loss: %.3f' % (epochs+1, no_epochs, run_loss/100))
+            run_loss = 0.0
+    print('[Epoch %d of %d] Epoch Loss: %.3f' % (epochs+1, no_epochs, ep_loss/len(trainset)))
+print('Finished Training.')
+
+correct = 0
+total = 0
+demdetect.eval()
+with torch.no_grad():
+    for i, (points, labels) in enumerate(testing_loader):
+        points = points.reshape(-1, sequence_length, input_size).to(device)
+        labels = labels.to(device)
+        outputs = demdetect(points)
+        _, predicted = outputs.max(1)
+        correct +=  (predicted == labels).sum()
+        total += predicted.size(0)
+    print(f'Got {correct}/{total} with accuracy {float(correct)/float(total)*100:.2f}')
