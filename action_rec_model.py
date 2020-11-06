@@ -43,25 +43,26 @@ class DemDataset(Dataset):
         return self.x,self.y
         
 # Get the dataset ready
-csv_file = ']'
+csv_file = '#'
 
-demdataset = DemDataset(csv_file)#, transform=transforms.Compose([transforms.Normalize(mean, std)]))
+demdataset = DemDataset(csv_file)
 
 from sklearn.model_selection import train_test_split    
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=True)
-# Get the data split
-# train_size = int(0.8 * len(demdataset))
-# test_size = len(demdataset) - train_size
-# trainset, testset = random_split(demdataset, [train_size, test_size])
+
+loader = DataLoader(trainset, batch_size=len(trainset), num_workers=1)
+data = next(iter(loader))
+mean, std = data[0].mean(), data[0].std()
+print(mean, std)
 
 # Hyper Param
 input_size = 51
 sequence_length = 1 
 batch_size = 3
-hidden_size = 4
+hidden_size = 37
 num_layers = 1
 num_classes = 3
-no_epochs = 70
+no_epochs = 50
 lr_rate = 0.001
 
 # # Create the dataloader
@@ -73,6 +74,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(demdetect.parameters(), lr=lr_rate)
 demdetect.train()
 
+train_correct = []
 epoch_loss = []
 count_loss = []
 num_correct = 0
@@ -82,28 +84,30 @@ for epochs in range(no_epochs):
     run_loss = 0.0
     for i, (points, labels) in enumerate(training_loader):
         points = points.reshape(-1, sequence_length, input_size).to(device)
-        point_norm = transforms.Normalize(208.4252, 162.2313)
+        point_norm = transforms.Normalize(mean,std)
         points = point_norm(points)
         labels = labels.to(device)
         
         outputs = demdetect(points)
-        _, predictions = outputs.max(1)
-        num_correct += (predictions == labels).sum()
-        num_samples += predictions.size(0)
 
         loss = criterion(outputs, torch.max(labels,1)[1])
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
+        _, predictions = outputs.max(1)
+        num_correct += (predictions == labels).sum()
+        num_samples += predictions.size(0)
+
         run_loss += loss.item()
         ep_loss += loss.item()
         count_loss.append(run_loss)
+    train_correct.append(float(num_correct)/float(num_samples)*100)
     print(f'[Epoch {epochs+1}/{no_epochs}] Epoch Loss: {ep_loss/len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {float(num_correct)/float(num_samples)*100:.2f}%') 
 print('Finished Training.')
-# plt.plot(correct_total,correct)
-# # plt.show()
 demdetect.eval()
+
+test_correct = []
 t_num_correct = 0
 t_num_samples = 0
 with torch.no_grad():
@@ -112,14 +116,13 @@ with torch.no_grad():
     accuracy_running = []
     for i, (points, labels) in enumerate(testing_loader):
         points = points.reshape(-1, sequence_length, input_size).to(device)
-        point_norm = transforms.Normalize(208.4252, 162.2313)
+        point_norm = transforms.Normalize(mean, std)
         points = point_norm(points)
         labels = labels.to(device)
         outputs = demdetect.forward(points)
         _, predictions = outputs.max(1)
         t_num_correct += (predictions == labels).sum()
         t_num_samples += predictions.size(0)
+    test_correct.append(float(t_num_correct)/float(t_num_samples)*100)
     print(f'Got {t_num_correct} of {t_num_samples} with accuracy {float(t_num_correct)/float(t_num_samples)*100:.2f}%')
 demdetect.train()
-# plt.plot(test_loss_run, 'g', count_loss, 'r')
-# plt.show()
