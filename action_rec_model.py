@@ -6,6 +6,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
+import normalise
 
 # GPU if applicable
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -30,44 +31,41 @@ class LSTM(nn.Module):
 
 
 class DemDataset(Dataset):
-    def __init__(self, csv_file, transform=None):
-        self.df = pd.read_csv(csv_file)
-        del self.df['file_name']
+    def __init__(self, data, transform=None):
+        self.data = data
         self.transform = transform
 
     def __len__(self):
-        return len(self.df)
+        return len(self.data)
 
     def __getitem__(self, idx):
-        self.x = torch.Tensor(self.df.iloc[idx, :-3].astype('float64'))
-        self.y = torch.Tensor(self.df.iloc[idx, -3:].astype('float64'))
+        self.x = torch.Tensor(self.data.iloc[idx, :-3])
+        self.y = torch.Tensor(self.data.iloc[idx, -3:])
 
         return self.x, self.y
 
 
+# def hindawi_norm()
+
 # Get the dataset ready
 csv_file = '#'
-
-demdataset = DemDataset(csv_file)
-
+normaliser = normalise.Normalise(csv_file)
+hindawi_norm = normaliser.hindawi()
+# hind_concat = pd.concat([hindawi_norm[0], hindawi_norm[1]], axis=1)
+demdataset = DemDataset(hindawi_norm)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
-loader = DataLoader(trainset, batch_size=len(trainset), num_workers=1)
-data = next(iter(loader))
-mean, std = data[0].mean(), data[0].std()
-print(mean, std)
-
-# Hyper Param
-input_size = 51
+# # Hyper Param
+input_size = 34
 sequence_length = 1
 batch_size = 3
 hidden_size = 3
 num_layers = 1
 num_classes = 3
-no_epochs = 16
+no_epochs = 5
 lr_rate = 0.001
 
-# # Create the dataloader
+# Create the dataloader
 training_loader = DataLoader(trainset, batch_size=batch_size, shuffle=False)
 testing_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
 demdetect = LSTM(input_size, hidden_size, num_layers, num_classes).to(device)
@@ -87,9 +85,7 @@ for epochs in range(no_epochs):
     demdetect.train()
     for i, (points, labels) in enumerate(training_loader):
         points = points.to(device)
-        point_norm = transforms.Normalize(mean, std)
         points = points.unsqueeze_(1)
-        points = point_norm(points)
         labels = labels.to(device)
         outputs = demdetect(points)
         loss = criterion(outputs, torch.max(labels, 1)[1])
@@ -103,13 +99,11 @@ for epochs in range(no_epochs):
         ep_loss += loss.item()
     train_acc = float(num_correct) / float(num_samples) * 100
     train_err.append((train_acc - 100) * -1)
-    # End train loop
+    # # End train loop
     demdetect.eval()
     for (points, labels) in testing_loader:
         points = points.to(device)
-        point_norm = transforms.Normalize(mean, std)
         points = points.unsqueeze_(1)
-        points = point_norm(points)
         labels = labels.to(device)
         outputs = demdetect(points)
 

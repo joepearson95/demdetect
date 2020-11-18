@@ -10,6 +10,7 @@ class Normalise:
     def __init__(self, csv_file):
         self.df = pd.read_csv(csv_file)
         del self.df['file_name']
+        self.classes = self.df[self.df.columns[-3:]]
         self.df = self.df.iloc[:, :-3]
         self.no_score = self.df[self.df.columns.drop(list(self.df.filter(regex='score')))]
 
@@ -20,8 +21,8 @@ class Normalise:
         posture_vector = []
         for i in range(17):
             feature_vector.append([
-                self.no_score["point_" + str(i) + "_x"][0],
-                self.no_score["point_" + str(i) + "_y"][0],
+                self.no_score["point_" + str(i) + "_x"],
+                self.no_score["point_" + str(i) + "_y"],
             ])
         # Extract the three joints below using the midpoint formula
         neck_joint = [
@@ -53,7 +54,15 @@ class Normalise:
             ]
             posture_vector.append(distance_vector1 / norm)
 
-        return posture_vector
+        # Create the dataframe to pass to model
+        col_names = []
+        for x in range(17):
+            col_names.append("point_" + str(x) + "_x")
+            col_names.append("point_" + str(x) + "_y")
+        df = pd.DataFrame(sum(map(list, posture_vector), []))
+        hindawiDF = pd.DataFrame(df.T.values, columns=col_names)
+        hind_con = pd.concat([hindawiDF, self.classes], axis=1)
+        print(hind_con)
 
     # Loop a vector starting with specific index
     def start_with(self, arr, start_index):
@@ -69,8 +78,8 @@ class Normalise:
         hip_sub = []
         for i in range(17):
             feature_vector.append([
-                self.no_score["point_" + str(i) + "_x"][0],
-                self.no_score["point_" + str(i) + "_y"][0],
+                self.no_score["point_" + str(i) + "_x"],
+                self.no_score["point_" + str(i) + "_y"],
             ])
         hip_middle = [
             (feature_vector[11][0] + feature_vector[11][1]) / 2,
@@ -99,7 +108,16 @@ class Normalise:
         kf.append(euc_norm)
         kf.append(vel_norm)
         kf.append(acc_norm)
-        return kf
+
+        col_names = []
+        for x in range(17):
+            col_names.append("point_" + str(x) + "_x")
+            col_names.append("point_" + str(x) + "_y")
+
+        # df = pd.DataFrame(sum(map(list, posture_vector), []))
+        # hindawiDF = pd.DataFrame(df.T.values, columns=col_names)
+        # pd.concat([hindawi_norm[0], hindawi_norm[1]], axis=1)
+        print(kf)
 
 
 file = '#'
