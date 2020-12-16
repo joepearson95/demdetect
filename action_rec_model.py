@@ -48,21 +48,20 @@ class DemDataset(Dataset):
 # def hindawi_norm()
 
 # Get the dataset ready
-csv_file = '#'
+csv_file = '../demcare1_ingest_dataset.csv'
 normaliser = normalise.Normalise(csv_file)
-hindawi_norm = normaliser.hindawi()
-# hind_concat = pd.concat([hindawi_norm[0], hindawi_norm[1]], axis=1)
-demdataset = DemDataset(hindawi_norm)
+normaliserAlg = normaliser.hal() #hindawi()
+demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
 # # Hyper Param
-input_size = 34
+input_size = 90
 sequence_length = 1
 batch_size = 3
 hidden_size = 3
 num_layers = 1
 num_classes = 3
-no_epochs = 5
+no_epochs = 10
 lr_rate = 0.001
 
 # Create the dataloader

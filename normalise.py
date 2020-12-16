@@ -114,43 +114,25 @@ class Normalise:
                 norm = np.linalg.norm(reordered[idx])
                 pos_res = reordered[idx] / norm
                 curr_pos.append(pos_res)
+
                 # Calculate the velocity of position
                 if idx + 1 <= len(reordered) - 1 and idx - 1 >= 0:
                     norm_add = np.linalg.norm(reordered[idx + 1])
                     norm_subtract = np.linalg.norm(reordered[idx - 1])
                     vel_res = (reordered[idx + 1] / norm_add) - (reordered[idx - 1] / norm_subtract)
                     curr_pos.append(vel_res)
-                else:
-                    if idx == 0:
-                        vel_res = (reordered[1]/np.linalg.norm(reordered[1]) - (reordered[16] / np.linalg.norm(reordered[16])))
-                        curr_pos.append(vel_res)
-                    elif idx == 16:
-                        vel_res = (reordered[0]/np.linalg.norm(reordered[0])) - (reordered[15]/np.linalg.norm(reordered[15]))
-                        curr_pos.append(vel_res)
                 # Calculate the acceleration of position
                 if idx + 2 <= len(reordered) - 1 and idx - 2 >= 0:
                     norm_add_acc = np.linalg.norm(reordered[idx + 2])
                     norm_subtract_acc =  np.linalg.norm(reordered[idx - 2])
                     acc_res = (reordered[idx + 2]/norm_add_acc) + (reordered[idx - 2]/norm_subtract_acc)-2*(reordered[idx]/norm)
                     curr_pos.append(acc_res)
-                else:
-                    if idx == 0:
-                        acc_res = (reordered[2]/np.linalg.norm(reordered[2])) + (reordered[15]/np.linalg.norm(reordered[15]))-2*(reordered[0]/np.linalg.norm(reordered[0]))
-                        curr_pos.append(acc_res)
-                    elif idx == 1:
-                        acc_res = (reordered[3]/np.linalg.norm(reordered[3])) + (reordered[16]/np.linalg.norm(reordered[16]))-2*(reordered[1]/np.linalg.norm(reordered[1]))
-                        curr_pos.append(acc_res)
-                    elif idx == 15:
-                        acc_res = (reordered[0]/np.linalg.norm(reordered[0])) + (reordered[13]/np.linalg.norm(reordered[13]))-2*(reordered[15]/np.linalg.norm(reordered[15]))
-                        curr_pos.append(acc_res)
-                    elif idx == 16:
-                        acc_res = (reordered[1]/np.linalg.norm(reordered[1])) + (reordered[14]/np.linalg.norm(reordered[14]))-2*(reordered[16]/np.linalg.norm(reordered[16]))
-                        curr_pos.append(acc_res)
+                    
             kf.append(np.array(curr_pos).flatten())
-
+        
         # Add the column names dynamically
         col_names = []
-        for x in range(17):
+        for x in range(15):
             col_names.append("pos_point_" + str(x) + "_x")
             col_names.append("pos_point_" + str(x) + "_y")
             col_names.append("vel_point_" + str(x) + "_x")
@@ -161,4 +143,4 @@ class Normalise:
         # Add the classes columns onto the dataframe and return
         df = pd.DataFrame(kf, columns=col_names)
         hal_con = pd.concat([df, self.classes], axis=1)
-        print(hal_con)
+        return hal_con
