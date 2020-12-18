@@ -29,7 +29,6 @@ class LSTM(nn.Module):
         out = self.fc(out)
         return out
 
-
 class DemDataset(Dataset):
     def __init__(self, data, transform=None):
         self.data = data
@@ -88,33 +87,33 @@ for epochs in range(no_epochs):
         labels = labels.to(device)
         outputs = demdetect(points)
         loss = criterion(outputs, torch.max(labels, 1)[1])
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+#         optimizer.zero_grad()
+#         loss.backward()
+#         optimizer.step()
 
-        _, predictions = outputs.max(1)
-        num_correct += (predictions == torch.max(labels, 1)[1]).sum()
-        num_samples += predictions.size(0)
-        ep_loss += loss.item()
-    train_acc = float(num_correct) / float(num_samples) * 100
-    train_err.append((train_acc - 100) * -1)
-    # # End train loop
-    demdetect.eval()
-    for (points, labels) in testing_loader:
-        points = points.to(device)
-        points = points.unsqueeze_(1)
-        labels = labels.to(device)
-        outputs = demdetect(points)
+#         _, predictions = outputs.max(1)
+#         num_correct += (predictions == torch.max(labels, 1)[1]).sum()
+#         num_samples += predictions.size(0)
+#         ep_loss += loss.item()
+#     train_acc = float(num_correct) / float(num_samples) * 100
+#     train_err.append((train_acc - 100) * -1)
+#     # # End train loop
+#     demdetect.eval()
+#     for (points, labels) in testing_loader:
+#         points = points.to(device)
+#         points = points.unsqueeze_(1)
+#         labels = labels.to(device)
+#         outputs = demdetect(points)
 
-        _, predictions = outputs.max(1)
-        t_num_correct += (predictions == torch.max(labels, 1)[1]).sum()
-        t_num_samples += predictions.size(0)
-    test_acc = float(t_num_correct) / float(t_num_samples) * 100
-    test_err.append((test_acc - 100) * -1)
-    print(f'[Epoch {epochs + 1}/{no_epochs}] Epoch Loss: {ep_loss / len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {train_acc:.2f}%')
-    print(f'[Epoch {epochs + 1}/{no_epochs}] | Test: Got {num_correct} of {t_num_samples} with accuracy {test_acc:.2f}%')
-print('Finished Training.')
+#         _, predictions = outputs.max(1)
+#         t_num_correct += (predictions == torch.max(labels, 1)[1]).sum()
+#         t_num_samples += predictions.size(0)
+#     test_acc = float(t_num_correct) / float(t_num_samples) * 100
+#     test_err.append((test_acc - 100) * -1)
+#     print(f'[Epoch {epochs + 1}/{no_epochs}] Epoch Loss: {ep_loss / len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {train_acc:.2f}%')
+#     print(f'[Epoch {epochs + 1}/{no_epochs}] | Test: Got {num_correct} of {t_num_samples} with accuracy {test_acc:.2f}%')
+# print('Finished Training.')
 
-# print(len(train_acc_list), len(test_acc_list))
-# plt.plot(train_err, 'r', test_err, 'g')
-# plt.show()
+# # print(len(train_acc_list), len(test_acc_list))
+# # plt.plot(train_err, 'r', test_err, 'g')
+# # plt.show()
