@@ -7,7 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
 import normalise
-import numpy
+import numpy as np
 
 # GPU if applicable
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -15,13 +15,14 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        self.conv1 = torch.nn.Conv1d(1, 3, 90)
-        self.activ = torch.nn.ReLU()
-        self.conv2 = torch.nn.Conv1d(3, 3, 1)
+        self.conv = torch.nn.Sequential(
+            torch.nn.Conv1d(1, 3, 90),
+            torch.nn.ReLU(),
+            torch.nn.Conv1d(3,3,1),
+            torch.nn.ReLU()
+        )
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.activ(x)
-        x = self.conv2(x)
+        x = self.conv(x)
 
         log = torch.nn.functional.softmax(x, dim=1)
 
@@ -57,26 +58,49 @@ demdetect = CNN()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=0.001)
 
-for epochs in range(1):
-    ep_loss = 0.0
+no_epochs = 5
+num_correct = 0
+num_samples = 0
+t_num_correct = 0
+t_num_samples = 0
+
+train_err = []
+test_err = []
+for epochs in range(no_epochs):
+    running_loss = 0.0
     demdetect.train()
     for i, (points, labels) in enumerate(training_loader):
         points = points.to(device)
         points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
-        labels = torch.max(labels,1)[1]
-        print(labels)
-        break
-        # loss = criterion(outputs, torch.max(labels, 1)[1])
-        #optimizer.zero_grad()
-#         loss.backward()
-#         optimizer.step()
+        if labels.shape == (3,3):
+            labels = np.reshape(torch.max(labels,1)[1], (3,1))
+            loss = criterion(outputs, labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-#         runnin_loss += loss.item()
-#         if i % 2000 == 1999:    # print every 2000 mini-batches
-#             print('[%d, %5d] loss: %.3f' %
-#                   (epoch + 1, i + 1, running_loss / 2000))
-#             running_loss = 0.0
+            _, predictions = outputs.max(1)
+            num_correct += (predictions == torch.max(labels, 1)[1]).sum()
+            num_samples += predictions.size(0)
+            running_loss += loss.item()
+    train_acc = float(num_correct) / float(num_samples) * 100
+    train_err.append((train_acc - 100) * -1)
 
-# print('Finished Training')
+    demdetect.eval()
+    for (points, labels) in testing_loader:
+        points = points.to(device)
+        points = points.unsqueeze_(1)
+        labels = labels.to(device)
+        outputs = demdetect(points)
+        if labels.shape == (3,3):
+            labels = np.reshape(torch.max(labels, 1)[1], (3,1))
+            _, predictions = outputs.max(1)
+            t_num_correct += (predictions == torch.max(labels, 1)[1]).sum()
+            t_num_samples += predictions.size(0)
+    test_acc = float(t_num_correct) / float(t_num_samples) * 100
+    test_err.append((test_acc - 100) * -1)
+    print(f'[Epoch {epochs + 1}/{no_epochs}] Epoch Loss: {running_loss / len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {train_acc:.2f}%')
+    print(f'[Epoch {epochs + 1}/{no_epochs}] | Test: Got {t_num_correct} of {t_num_samples} with accuracy {test_acc:.2f}%')
+print('Finished Training')
