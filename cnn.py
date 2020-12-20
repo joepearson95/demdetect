@@ -15,14 +15,14 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        self.conv = torch.nn.Sequential(
-            torch.nn.Conv1d(1, 3, 90),
-            torch.nn.ReLU(),
-            torch.nn.Conv1d(3,3,1),
-            torch.nn.ReLU()
-        )
+        self.conv1 = torch.nn.Conv1d(in_channels=1, out_channels=4, kernel_size=17)
+        self.activ1 = torch.nn.ReLU()
+        self.conv2 = torch.nn.Conv1d(in_channels=4,out_channels=3,kernel_size=1)
+        
     def forward(self, x):
-        x = self.conv(x)
+        x = self.conv1(x)
+        x = self.activ1(x)
+        x = self.conv2(x)
 
         log = torch.nn.functional.softmax(x, dim=1)
 
@@ -48,7 +48,7 @@ class DemDataset(Dataset):
 # Get the dataset ready
 csv_file = '../demcare1_ingest_dataset.csv'
 normaliser = normalise.Normalise(csv_file)
-normaliserAlg = normaliser.hal() #hindawi()
+normaliserAlg = normaliser.hindawi()
 demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
@@ -56,7 +56,7 @@ training_loader = DataLoader(trainset, batch_size=3, shuffle=False)
 testing_loader = DataLoader(testset, batch_size=3, shuffle=False)
 demdetect = CNN()
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(demdetect.parameters(), lr=0.001)
+optimizer = optim.Adam(demdetect.parameters(), lr=0.0001)
 
 no_epochs = 5
 num_correct = 0
