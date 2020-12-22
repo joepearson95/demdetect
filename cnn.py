@@ -15,8 +15,8 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        self.conv1 = torch.nn.Conv1d(1, 50, 17)
-        self.hiddden = torch.nn.Linear(50*1*1, 20)
+        self.conv1 = torch.nn.Conv1d(1, 80, 17)
+        self.hiddden = torch.nn.Linear(80*1*1, 20)
         self.out = torch.nn.Linear(20,3)
         self.activ1 = torch.nn.ReLU()
 
@@ -58,7 +58,7 @@ demdetect = CNN()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=0.0001)
 
-no_epochs = 20
+no_epochs = 25
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
