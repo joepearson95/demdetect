@@ -12,16 +12,22 @@ import numpy as np
 # GPU if applicable
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
+# hindawi = 1,80,90 -> 80,20 -> 20,3
+# hal = 
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
-        self.conv1 = torch.nn.Conv1d(1, 80, 17)
-        self.hiddden = torch.nn.Linear(80*1*1, 20)
+        self.conv1 = torch.nn.Conv1d(1, 80, 90)
+        self.drop = torch.nn.Dropout(0.1)
+        self.conv2 = torch.nn.Conv1d(80,50,1)
+        self.hiddden = torch.nn.Linear(50*1*1, 20)
         self.out = torch.nn.Linear(20,3)
         self.activ1 = torch.nn.ReLU()
 
     def forward(self, x):
         x = self.activ1(self.conv1(x))
+        x = self.drop(x)
+        x = self.activ1(self.conv2(x))
         x = x.view(x.size(0), -1)
         x = self.activ1(self.hiddden(x))
         x = self.out(x)
@@ -48,7 +54,7 @@ class DemDataset(Dataset):
 # Get the dataset ready
 csv_file = '../demcare1_ingest_dataset.csv'
 normaliser = normalise.Normalise(csv_file)
-normaliserAlg = normaliser.hindawi()
+normaliserAlg = normaliser.hal()
 demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
@@ -56,7 +62,7 @@ training_loader = DataLoader(trainset, batch_size=3, shuffle=False)
 testing_loader = DataLoader(testset, batch_size=3, shuffle=False)
 demdetect = CNN()
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(demdetect.parameters(), lr=0.0001)
+optimizer = optim.Adam(demdetect.parameters(), lr=0.01)
 
 no_epochs = 25
 num_correct = 0
