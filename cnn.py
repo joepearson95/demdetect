@@ -14,25 +14,59 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 # hindawi = 1,80,90 -> 80,20 -> 20,3
 # hal = 
-class CNN(nn.Module):
-    def __init__(self):
-        super(CNN, self).__init__()
-        self.conv1 = torch.nn.Conv1d(1, 80, 90)
-        self.drop = torch.nn.Dropout(0.1)
-        self.conv2 = torch.nn.Conv1d(80,50,1)
-        self.hiddden = torch.nn.Linear(50*1*1, 20)
-        self.out = torch.nn.Linear(20,3)
+
+def single_conv(in_conv,out_conv, size_of_kernel):
+    conv = nn.Sequential(
+        self.conv1 = torch.nn.Conv1d(in_conv, out_conv, kernel_size=size_of_kernel)
         self.activ1 = torch.nn.ReLU()
+    )
+    return conv
+
+class TCN(nn.Module):
+    def __init__(self):
+        super(TCN, self).__init__()
+        # Downsampling
+        self.maxpool = torch.nn.MaxPool1d(2)
+        
+        self.down_conv1 = single_conv()
+        self.down_conv2 = single_conv()
+
+        # Upsampling
+        self.up_samp1 = torch.nn.ConvTranspose1d(
+            in_channels=,
+            out_channels=,
+            kernel_size=,
+            stride=
+        )
+        self.up_c1 = single_conv()
+
+        self.up_samp2 == torch.nn.ConvTranspose1d(
+            in_channels=,
+            out_channels=,
+            kernel_size=,
+            stride=
+        )
+        self.out = torch.Conv1d(
+            in_channels=,
+            out_channels=,
+            kernel_size=
+        )
 
     def forward(self, x):
-        x = self.activ1(self.conv1(x))
-        x = self.drop(x)
-        x = self.activ1(self.conv2(x))
-        x = x.view(x.size(0), -1)
-        x = self.activ1(self.hiddden(x))
+        # encoder
+        x1 = self.down_conv1(x)
+        x2 = self.maxpool(x1)
+        x3 = self.down_conv2(x2)
+        x4 = self.maxpool(x3)
+
+        # decoder
+        x = self.up_samp1(x4)
+        x = self.up_c1(x)
+        x = self.up_samp2(x)
         x = self.out(x)
-        
-        return x
+
+        log = torch.nn.functional.softmax(x, dim=1)
+        return log
 
 class DemDataset(Dataset):
     def __init__(self, data, transform=None):
@@ -60,7 +94,7 @@ trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
 training_loader = DataLoader(trainset, batch_size=3, shuffle=False)
 testing_loader = DataLoader(testset, batch_size=3, shuffle=False)
-demdetect = CNN()
+demdetect = TCN()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=0.01)
 
