@@ -17,8 +17,8 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 def single_conv(in_conv,out_conv, size_of_kernel):
     conv = nn.Sequential(
-        self.conv1 = torch.nn.Conv1d(in_conv, out_conv, kernel_size=size_of_kernel)
-        self.activ1 = torch.nn.ReLU()
+        torch.nn.Conv1d(in_conv, out_conv, kernel_size=size_of_kernel),
+        torch.nn.ReLU()
     )
     return conv
 
@@ -26,30 +26,28 @@ class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
         # Downsampling
-        self.maxpool = torch.nn.MaxPool1d(2)
+        self.maxpool = torch.nn.MaxPool1d(1)
         
-        self.down_conv1 = single_conv()
-        self.down_conv2 = single_conv()
+        self.down_conv1 = single_conv(1,50,17)
+        self.down_conv2 = single_conv(50,3,1)
 
         # Upsampling
         self.up_samp1 = torch.nn.ConvTranspose1d(
-            in_channels=,
-            out_channels=,
-            kernel_size=,
-            stride=
+            in_channels=3,
+            out_channels=50,
+            kernel_size=1,
         )
-        self.up_c1 = single_conv()
+        self.up_c1 = single_conv(50,3,1)
 
-        self.up_samp2 == torch.nn.ConvTranspose1d(
-            in_channels=,
-            out_channels=,
-            kernel_size=,
-            stride=
+        self.up_samp2 = torch.nn.ConvTranspose1d(
+            in_channels=3,
+            out_channels=50,
+            kernel_size=17,
         )
-        self.out = torch.Conv1d(
-            in_channels=,
-            out_channels=,
-            kernel_size=
+        self.out = torch.nn.Conv1d(
+            in_channels=50,
+            out_channels=3,
+            kernel_size=17
         )
 
     def forward(self, x):
@@ -88,7 +86,7 @@ class DemDataset(Dataset):
 # Get the dataset ready
 csv_file = '../demcare1_ingest_dataset.csv'
 normaliser = normalise.Normalise(csv_file)
-normaliserAlg = normaliser.hal()
+normaliserAlg = normaliser.hindawi()
 demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
@@ -98,12 +96,13 @@ demdetect = TCN()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=0.01)
 
-no_epochs = 25
+no_epochs = 5
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
 t_num_samples = 0
-
+weird = 0
+non_weird = 0
 train_err = []
 test_err = []
 for epochs in range(no_epochs):
@@ -114,9 +113,13 @@ for epochs in range(no_epochs):
         points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
-        # if labels.shape == (3,3):
-        # labels = np.reshape(torch.max(labels,1)[1], (3,1))
-        loss = criterion(outputs, torch.max(labels,1)[1])
+        if labels.size() == (3,3):
+            non_weird += 1
+            labels = np.reshape(torch.max(labels,1)[1], (3,1))
+        else:
+            weird += 1
+            labels = np.reshape(torch.max(labels,1)[1], (1,1))
+        loss = criterion(outputs, labels)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -134,8 +137,12 @@ for epochs in range(no_epochs):
         points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
-        # if labels.shape == (3,3):
-        # labels = np.reshape(torch.max(labels, 1)[1], (3,1))
+        if labels.size() == (3,3):
+            non_weird += 1
+            labels = np.reshape(torch.max(labels,1)[1], (3,1))
+        else:
+            weird += 1
+            labels = np.reshape(torch.max(labels,1)[1], (1,1))
         _, predictions = outputs.max(1)
         t_num_correct += (predictions == labels).sum()
         t_num_samples += predictions.size(0)
@@ -144,3 +151,4 @@ for epochs in range(no_epochs):
     print(f'[Epoch {epochs + 1}/{no_epochs}] Epoch Loss: {running_loss / len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {train_acc:.2f}%')
     print(f'[Epoch {epochs + 1}/{no_epochs}] | Test: Got {t_num_correct} of {t_num_samples} with accuracy {test_acc:.2f}%')
 print('Finished Training')
+print(non_weird, " n - ", weird)
