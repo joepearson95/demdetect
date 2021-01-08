@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+from torch.nn import Softmax
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
@@ -28,27 +29,28 @@ class TCN(nn.Module):
         # Downsampling
         self.maxpool = torch.nn.MaxPool1d(1)
         
-        self.down_conv1 = single_conv(1,50,17)
-        self.down_conv2 = single_conv(50,3,1)
+        self.down_conv1 = single_conv(1,3,17)
+        self.down_conv2 = single_conv(3,3,1)
 
         # Upsampling
         self.up_samp1 = torch.nn.ConvTranspose1d(
             in_channels=3,
-            out_channels=50,
+            out_channels=3,
             kernel_size=1,
         )
-        self.up_c1 = single_conv(50,3,1)
+        self.up_c1 = single_conv(3,3,1)
 
         self.up_samp2 = torch.nn.ConvTranspose1d(
             in_channels=3,
-            out_channels=50,
+            out_channels=3,
             kernel_size=17,
         )
-        self.out = torch.nn.Conv1d(
-            in_channels=50,
+        self.out1 = torch.nn.Conv1d(
+            in_channels=3,
             out_channels=3,
             kernel_size=17
         )
+        self.out2 = Softmax(dim=1)
 
     def forward(self, x):
         # encoder
@@ -61,10 +63,10 @@ class TCN(nn.Module):
         x = self.up_samp1(x4)
         x = self.up_c1(x)
         x = self.up_samp2(x)
-        x = self.out(x)
+        x = self.out1(x)
+        x = self.out2(x)
 
-        log = torch.nn.functional.softmax(x, dim=1)
-        return log
+        return x
 
 class DemDataset(Dataset):
     def __init__(self, data, transform=None):
@@ -94,17 +96,17 @@ training_loader = DataLoader(trainset, batch_size=3, shuffle=False)
 testing_loader = DataLoader(testset, batch_size=3, shuffle=False)
 demdetect = TCN()
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(demdetect.parameters(), lr=0.01)
+optimizer = optim.Adam(demdetect.parameters(), lr=0.0005)
 
-no_epochs = 5
+no_epochs = 10
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
 t_num_samples = 0
-weird = 0
-non_weird = 0
 train_err = []
 test_err = []
+
+from fipy import numerix as nx
 for epochs in range(no_epochs):
     running_loss = 0.0
     demdetect.train()
@@ -113,21 +115,18 @@ for epochs in range(no_epochs):
         points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
+        # print(torch.max(labels,1)[1])
         if labels.size() == (3,3):
-            non_weird += 1
             labels = np.reshape(torch.max(labels,1)[1], (3,1))
-        else:
-            weird += 1
-            labels = np.reshape(torch.max(labels,1)[1], (1,1))
-        loss = criterion(outputs, labels)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            loss = criterion(outputs, labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-        _, predictions = outputs.max(1)
-        num_correct += (predictions == labels).sum()
-        num_samples += predictions.size(0)
-        running_loss += loss.item()
+            _, predictions = outputs.max(1)
+            num_correct += (predictions == labels).sum()
+            num_samples += predictions.size(0)
+            running_loss += loss.item()
     train_acc = float(num_correct) / float(num_samples) * 100
     train_err.append((train_acc - 100) * -1)
 
@@ -137,18 +136,14 @@ for epochs in range(no_epochs):
         points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
+
         if labels.size() == (3,3):
-            non_weird += 1
             labels = np.reshape(torch.max(labels,1)[1], (3,1))
-        else:
-            weird += 1
-            labels = np.reshape(torch.max(labels,1)[1], (1,1))
-        _, predictions = outputs.max(1)
-        t_num_correct += (predictions == labels).sum()
-        t_num_samples += predictions.size(0)
+            _, predictions = outputs.max(1)
+            t_num_correct += (predictions == labels).sum()
+            t_num_samples += predictions.size(0)
     test_acc = float(t_num_correct) / float(t_num_samples) * 100
     test_err.append((test_acc - 100) * -1)
     print(f'[Epoch {epochs + 1}/{no_epochs}] Epoch Loss: {running_loss / len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {train_acc:.2f}%')
     print(f'[Epoch {epochs + 1}/{no_epochs}] | Test: Got {t_num_correct} of {t_num_samples} with accuracy {test_acc:.2f}%')
 print('Finished Training')
-print(non_weird, " n - ", weird)
