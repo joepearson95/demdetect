@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch.nn import Softmax
+import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
@@ -27,21 +28,21 @@ class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
         # Downsampling
-        self.maxpool = torch.nn.MaxPool1d(1)
+        self.maxpool = torch.nn.MaxPool1d(2)
         
-        self.down_conv1 = single_conv(1,3,17)
-        self.down_conv2 = single_conv(3,3,1)
+        self.down_conv1 = torch.nn.Conv1d(1,5,17)
+        self.down_conv2 = torch.nn.Conv1d(5,5,1)
 
         # Upsampling
         self.up_samp1 = torch.nn.ConvTranspose1d(
-            in_channels=3,
-            out_channels=3,
+            in_channels=5,
+            out_channels=5,
             kernel_size=1,
         )
-        self.up_c1 = single_conv(3,3,1)
+        self.up_c1 = torch.nn.Conv1d(5,5,1)
 
         self.up_samp2 = torch.nn.ConvTranspose1d(
-            in_channels=3,
+            in_channels=5,
             out_channels=3,
             kernel_size=17,
         )
@@ -54,9 +55,9 @@ class TCN(nn.Module):
 
     def forward(self, x):
         # encoder
-        x1 = self.down_conv1(x)
+        x1 = F.relu(self.down_conv1(x))
         x2 = self.maxpool(x1)
-        x3 = self.down_conv2(x2)
+        x3 = F.relu(self.down_conv2(x2))
         x4 = self.maxpool(x3)
 
         # decoder
@@ -92,11 +93,11 @@ normaliserAlg = normaliser.hindawi()
 demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
-training_loader = DataLoader(trainset, batch_size=3, shuffle=False)
-testing_loader = DataLoader(testset, batch_size=3, shuffle=False)
+training_loader = DataLoader(trainset, batch_size=5, shuffle=False)
+testing_loader = DataLoader(testset, batch_size=5, shuffle=False)
 demdetect = TCN()
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(demdetect.parameters(), lr=0.0005)
+optimizer = optim.Adam(demdetect.parameters(), lr=0.001)
 
 no_epochs = 10
 num_correct = 0
@@ -115,7 +116,6 @@ for epochs in range(no_epochs):
         points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
-        # print(torch.max(labels,1)[1])
         if labels.size() == (3,3):
             labels = np.reshape(torch.max(labels,1)[1], (3,1))
             loss = criterion(outputs, labels)
