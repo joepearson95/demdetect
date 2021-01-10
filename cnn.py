@@ -17,7 +17,7 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 # hindawi = 1,80,90 -> 80,20 -> 20,3
 # hal = 
 
-def single_conv(in_conv,out_conv, size_of_kernel):
+def layer_conv(in_conv,out_conv, size_of_kernel):
     conv = nn.Sequential(
         torch.nn.Conv1d(in_conv, out_conv, kernel_size=size_of_kernel),
         torch.nn.ReLU()
@@ -27,46 +27,27 @@ def single_conv(in_conv,out_conv, size_of_kernel):
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        # Downsampling
-        self.maxpool = torch.nn.MaxPool1d(2)
-        
-        self.down_conv1 = torch.nn.Conv1d(1,5,17)
-        self.down_conv2 = torch.nn.Conv1d(5,5,1)
+        self.first_layer = layer_conv(1,5,17)
+        self.maxpool = torch.nn.MaxPool1d(1)
 
         # Upsampling
-        self.up_samp1 = torch.nn.ConvTranspose1d(
-            in_channels=5,
-            out_channels=5,
-            kernel_size=1,
-        )
-        self.up_c1 = torch.nn.Conv1d(5,5,1)
-
-        self.up_samp2 = torch.nn.ConvTranspose1d(
+        self.up_samp = torch.nn.ConvTranspose1d(
             in_channels=5,
             out_channels=3,
             kernel_size=17,
         )
-        self.out1 = torch.nn.Conv1d(
-            in_channels=3,
-            out_channels=3,
-            kernel_size=17
-        )
+        self.uplayer1 = layer_conv(3,3,17)
         self.out2 = Softmax(dim=1)
 
     def forward(self, x):
         # encoder
-        x1 = F.relu(self.down_conv1(x))
-        x2 = self.maxpool(x1)
-        x3 = F.relu(self.down_conv2(x2))
-        x4 = self.maxpool(x3)
+        encode1 = self.first_layer(x)
+        maxpool = self.maxpool(encode1)
 
         # decoder
-        x = self.up_samp1(x4)
-        x = self.up_c1(x)
-        x = self.up_samp2(x)
-        x = self.out1(x)
+        x = self.up_samp(maxpool)
+        x = self.uplayer1(x)
         x = self.out2(x)
-
         return x
 
 class DemDataset(Dataset):
@@ -116,17 +97,16 @@ for epochs in range(no_epochs):
         points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
-        if labels.size() == (3,3):
-            labels = np.reshape(torch.max(labels,1)[1], (3,1))
-            loss = criterion(outputs, labels)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+        labels = np.reshape(torch.max(labels,1)[1], (5,1))
+        loss = criterion(outputs, labels)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-            _, predictions = outputs.max(1)
-            num_correct += (predictions == labels).sum()
-            num_samples += predictions.size(0)
-            running_loss += loss.item()
+        _, predictions = outputs.max(1)
+        num_correct += (predictions == labels).sum()
+        num_samples += predictions.size(0)
+        running_loss += loss.item()
     train_acc = float(num_correct) / float(num_samples) * 100
     train_err.append((train_acc - 100) * -1)
 
@@ -137,11 +117,11 @@ for epochs in range(no_epochs):
         labels = labels.to(device)
         outputs = demdetect(points)
 
-        if labels.size() == (3,3):
-            labels = np.reshape(torch.max(labels,1)[1], (3,1))
-            _, predictions = outputs.max(1)
-            t_num_correct += (predictions == labels).sum()
-            t_num_samples += predictions.size(0)
+        # if labels.size() == (3,3):
+        labels = np.reshape(torch.max(labels,1)[1], (5,1))
+        _, predictions = outputs.max(1)
+        t_num_correct += (predictions == labels).sum()
+        t_num_samples += predictions.size(0)
     test_acc = float(t_num_correct) / float(t_num_samples) * 100
     test_err.append((test_acc - 100) * -1)
     print(f'[Epoch {epochs + 1}/{no_epochs}] Epoch Loss: {running_loss / len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {train_acc:.2f}%')
