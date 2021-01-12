@@ -27,28 +27,24 @@ def layer_conv(in_conv,out_conv, size_of_kernel):
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = layer_conv(1,5,17)
-        self.maxpool = torch.nn.MaxPool1d(1)
+        self.first_layer = torch.nn.Conv1d(90,9,1)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
-            in_channels=5,
-            out_channels=3,
-            kernel_size=17,
+            in_channels=9,
+            out_channels=9,
+            kernel_size=1,
         )
-        self.uplayer1 = layer_conv(3,3,17)
-        self.out2 = Softmax(dim=1)
+        self.uplayer1 = torch.nn.Conv1d(9,3,1)
 
     def forward(self, x):
         # encoder
-        encode1 = self.first_layer(x)
-        maxpool = self.maxpool(encode1)
-
+        encode1 = F.relu(self.first_layer(x))
+        pooled = F.max_pool1d(encode1,1)
         # decoder
-        x = self.up_samp(maxpool)
-        x = self.uplayer1(x)
-        x = self.out2(x)
-        return x
+        x = self.up_samp(pooled)
+        x = F.relu(self.uplayer1(x))
+        return F.softmax(x, dim=1)
 
 class DemDataset(Dataset):
     def __init__(self, data, transform=None):
@@ -70,7 +66,7 @@ class DemDataset(Dataset):
 # Get the dataset ready
 csv_file = '../demcare1_ingest_dataset.csv'
 normaliser = normalise.Normalise(csv_file)
-normaliserAlg = normaliser.hindawi()
+normaliserAlg = normaliser.hal()
 demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
@@ -80,7 +76,7 @@ demdetect = TCN()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=0.001)
 
-no_epochs = 10
+no_epochs = 70
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
@@ -94,7 +90,7 @@ for epochs in range(no_epochs):
     demdetect.train()
     for i, (points, labels) in enumerate(training_loader):
         points = points.to(device)
-        points = points.unsqueeze_(1)
+        points = points.unsqueeze_(2)
         labels = labels.to(device)
         outputs = demdetect(points)
         labels = np.reshape(torch.max(labels,1)[1], (5,1))
@@ -113,7 +109,7 @@ for epochs in range(no_epochs):
     demdetect.eval()
     for (points, labels) in testing_loader:
         points = points.to(device)
-        points = points.unsqueeze_(1)
+        points = points.unsqueeze_(2)
         labels = labels.to(device)
         outputs = demdetect(points)
 
