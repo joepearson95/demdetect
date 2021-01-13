@@ -27,15 +27,15 @@ def layer_conv(in_conv,out_conv, size_of_kernel):
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(90,9,1)
+        self.first_layer = torch.nn.Conv1d(90,3,1)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
-            in_channels=9,
-            out_channels=9,
+            in_channels=3,
+            out_channels=90,
             kernel_size=1,
         )
-        self.uplayer1 = torch.nn.Conv1d(9,3,1)
+        self.uplayer1 = torch.nn.Conv1d(90,3,1)
 
     def forward(self, x):
         # encoder
