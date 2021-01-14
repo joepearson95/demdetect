@@ -14,52 +14,19 @@ import numpy as np
 # GPU if applicable
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-def layer_conv(in_conv,out_conv, size_of_kernel):
-    conv = nn.Sequential(
-        torch.nn.Conv1d(in_conv, out_conv, kernel_size=size_of_kernel),
-        torch.nn.ReLU()
-    )
-    return conv
-
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(90,3,1)
-
-        # Upsampling
-        self.up_samp = torch.nn.ConvTranspose1d(
-            in_channels=3,
-            out_channels=90,
-            kernel_size=1,
-        )
-        self.uplayer1 = torch.nn.Conv1d(90,3,1)
+        self.conv1 = nn.Conv1d(1, 3, 17)
+        self.lstm1 = nn.LSTM(1,3, 1)
+        self.fc1 = nn.Linear(3, 3)
 
     def forward(self, x):
-        # encoder
-        encode1 = F.relu(self.first_layer(x))
-        pooled = F.max_pool1d(encode1,1)
-        # decoder
-        x = self.up_samp(pooled)
-        x = F.relu(self.uplayer1(x))
-        return F.softmax(x, dim=1)
-
-class TCNLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes):
-	    super(TCNLSTM, self).__init__()
-	    self.TCN = TCN()
-	    self.num_layers = num_layers
-	    self.hidden_size = hidden_size
-	    self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
-	    self.fc = nn.Linear(hidden_size, num_classes)
-
-    def forward(self, x):
-        # hidden state and cell state
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
-        out, _ = self.lstm(x, (h0, c0))
-        out = out[:, -1, :]
-        out = self.fc(out)
-        return out
+        x = F.relu((self.conv1(x)))
+        x, _ = self.lstm1(x)
+        x = x[:, -1, :]
+        x = self.fc1(x)
+        return x
 
 class DemDataset(Dataset):
     def __init__(self, data, transform=None):
@@ -75,40 +42,33 @@ class DemDataset(Dataset):
 
         return self.x, self.y
 
+
+# def hindawi_norm()
+
 # Get the dataset ready
 csv_file = '../demcare1_ingest_dataset.csv'
 normaliser = normalise.Normalise(csv_file)
-normaliserAlg = normaliser.hal() #hindawi()
+normaliserAlg = normaliser.hindawi()
 demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
-# Hyper Param
-input_size = 90
-sequence_length = 1
-batch_size = 
-hidden_size = 3
-num_layers = 1
-num_classes = 3
-no_epochs = 20
-lr_rate = 0.001
-
-# Create the dataloader
-training_loader = DataLoader(trainset, batch_size=batch_size, shuffle=False)
-testing_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
-demdetect = TCNLSTM(input_size, hidden_size, num_layers, num_classes).to(device)
-
+training_loader = DataLoader(trainset, batch_size=3, shuffle=False)
+testing_loader = DataLoader(testset, batch_size=3, shuffle=False)
+demdetect = TCN()
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(demdetect.parameters(), lr=lr_rate)
+optimizer = optim.Adam(demdetect.parameters(), lr=0.001)
 
+no_epochs = 10
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
 t_num_samples = 0
-
 train_err = []
 test_err = []
+
+# Begin training
 for epochs in range(no_epochs):
-    ep_loss = 0.0
+    running_loss = 0.0
     demdetect.train()
     for i, (points, labels) in enumerate(training_loader):
         points = points.to(device)
@@ -123,22 +83,22 @@ for epochs in range(no_epochs):
         _, predictions = outputs.max(1)
         num_correct += (predictions == torch.max(labels, 1)[1]).sum()
         num_samples += predictions.size(0)
-        ep_loss += loss.item()
+        running_loss += loss.item()
     train_acc = float(num_correct) / float(num_samples) * 100
     train_err.append((train_acc - 100) * -1)
-    # End train loop
+
+    # begin training
     demdetect.eval()
     for (points, labels) in testing_loader:
         points = points.to(device)
         points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
-
         _, predictions = outputs.max(1)
         t_num_correct += (predictions == torch.max(labels, 1)[1]).sum()
         t_num_samples += predictions.size(0)
     test_acc = float(t_num_correct) / float(t_num_samples) * 100
     test_err.append((test_acc - 100) * -1)
-    print(f'[Epoch {epochs + 1}/{no_epochs}] Epoch Loss: {ep_loss / len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {train_acc:.2f}%')
-    print(f'[Epoch {epochs + 1}/{no_epochs}] | Test: Got {num_correct} of {t_num_samples} with accuracy {test_acc:.2f}%')
-print('Finished Training.')
+    print(f'[Epoch {epochs + 1}/{no_epochs}] Epoch Loss: {running_loss / len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {train_acc:.2f}%')
+    print(f'[Epoch {epochs + 1}/{no_epochs}] | Test: Got {t_num_correct} of {t_num_samples} with accuracy {test_acc:.2f}%')
+print('Finished Training')
