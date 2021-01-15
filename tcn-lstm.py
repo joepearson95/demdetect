@@ -17,15 +17,15 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(1,3,90)
+        self.first_layer = torch.nn.Conv1d(1,3,17)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
             in_channels=3,
-            out_channels=4,
+            out_channels=3,
             kernel_size=1,
         )
-        self.uplayer1 = torch.nn.Conv1d(4,3,1)
+        self.uplayer1 = torch.nn.Conv1d(3,3,1)
         self.lstm1 = nn.LSTM(1,3,1)
         self.fc1 = nn.Linear(3,3)
 

@@ -17,41 +17,16 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(1,3,17)
-
-        # Upsampling
-        self.up_samp = torch.nn.ConvTranspose1d(
-            in_channels=3,
-            out_channels=3,
-            kernel_size=1,
-        )
-        self.uplayer1 = torch.nn.Conv1d(3,3,1)
-        self.lstm1 = nn.LSTM(1,3,1)
-        self.fc1 = nn.Linear(3,3)
+        self.conv1 = nn.Conv1d(1, 3, 17)
+        self.lstm1 = nn.LSTM(1,3, 1)
+        self.fc1 = nn.Linear(3, 3)
 
     def forward(self, x):
-        encode1 = F.relu(self.first_layer(x))
-        pooled = F.max_pool1d(encode1,1)
-        # decoder
-        x = self.up_samp(pooled)
-        x = F.softmax(F.relu(self.uplayer1(x)), dim=1)
+        x = F.relu((self.conv1(x)))
         x, _ = self.lstm1(x)
         x = x[:, -1, :]
         x = self.fc1(x)
         return x
-
-    # def __init__(self):
-    #     super(TCN, self).__init__()
-    #     self.conv1 = nn.Conv1d(1, 3, 17)
-    #     self.lstm1 = nn.LSTM(1,3, 1)
-    #     self.fc1 = nn.Linear(3, 3)
-
-    # def forward(self, x):
-    #     x = F.relu((self.conv1(x)))
-    #     x, _ = self.lstm1(x)
-    #     x = x[:, -1, :]
-    #     x = self.fc1(x)
-    #     return x
 
 class DemDataset(Dataset):
     def __init__(self, data, transform=None):
