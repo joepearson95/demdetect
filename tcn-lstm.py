@@ -17,15 +17,15 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(1,3,17)
+        self.first_layer = torch.nn.Conv1d(1,3,90)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
             in_channels=3,
-            out_channels=3,
+            out_channels=4,
             kernel_size=1,
         )
-        self.uplayer1 = torch.nn.Conv1d(3,3,1)
+        self.uplayer1 = torch.nn.Conv1d(4,3,1)
         self.lstm1 = nn.LSTM(1,3,1)
         self.fc1 = nn.Linear(3,3)
 
@@ -39,19 +39,6 @@ class TCN(nn.Module):
         x = x[:, -1, :]
         x = self.fc1(x)
         return x
-
-    # def __init__(self):
-    #     super(TCN, self).__init__()
-    #     self.conv1 = nn.Conv1d(1, 3, 17)
-    #     self.lstm1 = nn.LSTM(1,3, 1)
-    #     self.fc1 = nn.Linear(3, 3)
-
-    # def forward(self, x):
-    #     x = F.relu((self.conv1(x)))
-    #     x, _ = self.lstm1(x)
-    #     x = x[:, -1, :]
-    #     x = self.fc1(x)
-    #     return x
 
 class DemDataset(Dataset):
     def __init__(self, data, transform=None):
@@ -73,7 +60,7 @@ class DemDataset(Dataset):
 # Get the dataset ready
 csv_file = '../demcare1_ingest_dataset.csv'
 normaliser = normalise.Normalise(csv_file)
-normaliserAlg = normaliser.hindawi()
+normaliserAlg = normaliser.hal()#hindawi()
 demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
@@ -83,7 +70,7 @@ demdetect = TCN()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=0.001)
 
-no_epochs = 60
+no_epochs = 30
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
