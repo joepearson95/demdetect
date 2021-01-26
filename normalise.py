@@ -106,28 +106,23 @@ class Normalise:
             curr_pos = []
             for j in self.start_with(hip_sub, 11):
                 reordered.append(j)
-            
             # Loop the above array. When an 'out of bounds' error
             # happens, explicitly calculate the point before appending
             for idx in range(point_len):
                 # Calculate the norm of position
-                norm = np.linalg.norm(reordered[idx])
-                pos_res = reordered[idx] / norm
-                curr_pos.append(pos_res)
+                norm = np.linalg.norm(reordered[idx][0] - reordered[idx][1])
+        #         pos_res = reordered[idx] / norm
+                curr_pos.append(norm)
 
                 # Calculate the velocity of position
                 if idx + 1 <= len(reordered) - 1 and idx - 1 >= 0:
-                    norm_add = np.linalg.norm(reordered[idx + 1])
-                    norm_subtract = np.linalg.norm(reordered[idx - 1])
-                    vel_res = (reordered[idx + 1] / norm_add) - (reordered[idx - 1] / norm_subtract)
+                    vel_res = (np.linalg.norm(reordered[idx + 1][0] - reordered[idx + 1][1])) - (np.linalg.norm(reordered[idx - 1][0] - reordered[idx - 1][1]))
                     curr_pos.append(vel_res)
                 # Calculate the acceleration of position
                 if idx + 2 <= len(reordered) - 1 and idx - 2 >= 0:
-                    norm_add_acc = np.linalg.norm(reordered[idx + 2])
-                    norm_subtract_acc =  np.linalg.norm(reordered[idx - 2])
-                    acc_res = (reordered[idx + 2]/norm_add_acc) + (reordered[idx - 2]/norm_subtract_acc)-2*(reordered[idx]/norm)
+                    acc_res = (np.linalg.norm(reordered[idx + 2][0] - reordered[idx + 2][1])) + (np.linalg.norm(reordered[idx - 2][0] - reordered[idx - 2][1])) - 2 * (norm)
                     curr_pos.append(acc_res)
-                    
+
             kf.append(np.array(curr_pos).flatten())
         
         # Add the column names dynamically
@@ -141,6 +136,6 @@ class Normalise:
             col_names.append("acc_point_" + str(x) + "_y")
 
         # Add the classes columns onto the dataframe and return
-        df = pd.DataFrame(kf, columns=col_names)
+        df = pd.DataFrame(kf)#, columns=col_names)
         hal_con = pd.concat([df, self.classes], axis=1)
         return hal_con
