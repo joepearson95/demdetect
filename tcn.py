@@ -14,37 +14,26 @@ import numpy as np
 # GPU if applicable
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-# hindawi = 1,80,90 -> 80,20 -> 20,3
-# hal = 
-
-def layer_conv(in_conv,out_conv, size_of_kernel):
-    conv = nn.Sequential(
-        torch.nn.Conv1d(in_conv, out_conv, kernel_size=size_of_kernel),
-        torch.nn.ReLU()
-    )
-    return conv
-
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(90,3,1)
+        self.first_layer = torch.nn.Conv1d(2,3,90)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
             in_channels=3,
-            out_channels=90,
-            kernel_size=1,
+            out_channels=3,
+            kernel_size=1
         )
-        self.uplayer1 = torch.nn.Conv1d(90,3,1)
+        self.uplayer1 = torch.nn.Conv1d(3,3,1)
 
     def forward(self, x):
-        # encoder
         encode1 = F.relu(self.first_layer(x))
         pooled = F.max_pool1d(encode1,1)
         # decoder
         x = self.up_samp(pooled)
-        x = F.relu(self.uplayer1(x))
-        return F.softmax(x, dim=1)
+        x = F.softmax(F.relu(self.uplayer1(x)), dim=1)
+        return x
 
 class DemDataset(Dataset):
     def __init__(self, data, transform=None):
@@ -70,13 +59,13 @@ normaliserAlg = normaliser.hal()
 demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
-training_loader = DataLoader(trainset, batch_size=5, shuffle=False)
-testing_loader = DataLoader(testset, batch_size=5, shuffle=False)
+training_loader = DataLoader(trainset, batch_size=3, shuffle=False)
+testing_loader = DataLoader(testset, batch_size=3, shuffle=False)
 demdetect = TCN()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=0.001)
 
-no_epochs = 70
+no_epochs = 30
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
@@ -84,37 +73,39 @@ t_num_samples = 0
 train_err = []
 test_err = []
 
-from fipy import numerix as nx
+# Begin training
 for epochs in range(no_epochs):
     running_loss = 0.0
     demdetect.train()
     for i, (points, labels) in enumerate(training_loader):
         points = points.to(device)
-        points = points.unsqueeze_(2)
+        points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
-        labels = np.reshape(torch.max(labels,1)[1], (5,1))
+        labels = torch.max(labels, 1)[1]
+        labels = labels.view(labels.size(0), -1)
         loss = criterion(outputs, labels)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         _, predictions = outputs.max(1)
-        num_correct += (predictions == labels).sum()
+        num_correct += (predictions ==  labels).sum()
         num_samples += predictions.size(0)
         running_loss += loss.item()
     train_acc = float(num_correct) / float(num_samples) * 100
     train_err.append((train_acc - 100) * -1)
 
+    # begin training
     demdetect.eval()
     for (points, labels) in testing_loader:
         points = points.to(device)
-        points = points.unsqueeze_(2)
+        points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
 
-        # if labels.size() == (3,3):
-        labels = np.reshape(torch.max(labels,1)[1], (5,1))
+        labels = torch.max(labels, 1)[1]
+        labels = labels.view(labels.size(0), -1) 
         _, predictions = outputs.max(1)
         t_num_correct += (predictions == labels).sum()
         t_num_samples += predictions.size(0)

@@ -17,7 +17,7 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.conv1 = nn.Conv1d(1, 3, 17)
+        self.conv1 = nn.Conv1d(1, 3, 90)
         self.lstm1 = nn.LSTM(1,3, 1)
         self.fc1 = nn.Linear(3, 3)
 
@@ -48,7 +48,7 @@ class DemDataset(Dataset):
 # Get the dataset ready
 csv_file = '../demcare1_ingest_dataset.csv'
 normaliser = normalise.Normalise(csv_file)
-normaliserAlg = normaliser.hindawi()
+normaliserAlg = normaliser.hal()
 demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
