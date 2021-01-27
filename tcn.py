@@ -82,8 +82,12 @@ for epochs in range(no_epochs):
         points = points.unsqueeze_(2)
         labels = labels.to(device)
         outputs = demdetect(points)
-        labels = torch.max(labels, 1)[1] 
-        labels = labels.view(labels.size(0), -1)
+        
+        labels = torch.max(labels, 1)[1]
+
+        if outputs.size() == 3:
+            outputs = outputs.reshape(3,1,3,1)
+        outputs = outputs.flatten(start_dim=1)
         loss = criterion(outputs, labels)
         optimizer.zero_grad()
         loss.backward()
@@ -105,7 +109,11 @@ for epochs in range(no_epochs):
         outputs = demdetect(points)
 
         labels = torch.max(labels, 1)[1]
-        labels = labels.view(labels.size(0), -1) 
+
+        if outputs.size() == 3:
+            outputs = outputs.reshape(3,1,3,1)
+        outputs = outputs.flatten(start_dim=1)
+
         _, predictions = outputs.max(1)
         t_num_correct += (predictions == labels).sum()
         t_num_samples += predictions.size(0)
