@@ -10,6 +10,8 @@ import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
 import normalise
 import numpy as np
+from numpy import load, save
+import os
 
 # GPU if applicable
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -17,7 +19,7 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(1,2,45)
+        self.first_layer = torch.nn.Conv1d(batch_size,2,45)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
@@ -52,59 +54,43 @@ class DemDataset(Dataset):
             frames_labels.append(i[-3:])
         return frames_points, frames_labels
 
-
-# def hindawi_norm()
-
 # Get the dataset ready
 csv_file = '../demcare1_ingest_dataset.csv'
 normaliser = normalise.Normalise(csv_file)
 normaliserAlg = normaliser.hal()
 
+# Params
 window = 2
-frames = []
-for i in range(len(normaliserAlg)):
-    if i == 0:
-        frames.append(normaliserAlg.iloc[i:i+window].to_numpy())
-    else:
-        frames.append(normaliserAlg.iloc[i+1:(i+1)+window].to_numpy())
-
-from numpy import load
-data = load('data.npy', allow_pickle=True)
-# save('data.npy', frames)
-
-demdataset = DemDataset(data)
-trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
-training_loader = DataLoader(trainset, batch_size=1, shuffle=False)
-testing_loader = DataLoader(testset, batch_size=1, shuffle=False)
-
-# frames_points = []
-# frames_labels = []
-# for i, (points, labels) in enumerate(training_loader):
-#     points = torch.stack(points)
-#     print(points.shape)
-#     # for j in range(0,2):
-#     #     frames_points.append(item[0][j][:-3])
-#     #     frames_labels.append(item[0][j][-3:])
-#     if i == 0:
-#         break
-# print(torch.stack(frames_points))   
-# stacked_points = torch.stack(frames_points)
-# stacked_labels = torch.stack(frames_labels)
-# print(stacked_points.shape)
-# print(frames_labels.shape)
-
-
-demdetect = TCN()
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(demdetect.parameters(), lr=0.001)
-
-no_epochs = 5
+batch_size = 1
+learning_rate = 0.001
+no_epochs = 10
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
 t_num_samples = 0
 train_err = []
 test_err = []
+
+# if os.path.exists("data.npy"):
+#     os.remove("data.npy")
+#     frames = []
+#     for i in range(len(normaliserAlg) - window):
+#         if i == 0:
+#             frames.append(normaliserAlg.iloc[i:i+window].to_numpy())
+#         else:
+#             frames.append(normaliserAlg.iloc[i+1:(i+1)+window].to_numpy())
+#     save('data.npy', frames)
+data = load('data.npy', allow_pickle=True)
+print("Data remove before saved and loaded.")
+
+demdataset = DemDataset(data)
+trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
+training_loader = DataLoader(trainset, batch_size=batch_size, shuffle=False)
+testing_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
+
+demdetect = TCN()
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(demdetect.parameters(), lr=learning_rate)
 
 # Begin training
 for epochs in range(no_epochs):
@@ -119,13 +105,15 @@ for epochs in range(no_epochs):
         labels = labels.to(device)
 
         outputs = demdetect(points)
+        outputs = outputs.flatten(start_dim=1)
+        print(outputs, labels)
         labels = torch.max(labels, 1)[1]
 
-        # if outputs.size() == 3:
-        #     outputs = outputs.reshape(3,1,3,1)
-        outputs = outputs.flatten(start_dim=1)
-        # print(outputs.shape, labels.shape)
-        loss = criterion(outputs, labels)
+        print(outputs, labels)
+        print(outputs.shape, labels.shape)
+        # loss = criterion(outputs, labels)
+        if i == 0:
+            break
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -140,15 +128,15 @@ for epochs in range(no_epochs):
     demdetect.eval()
     for (points, labels) in testing_loader:
         points = torch.stack(points).float()
+            
         # points = points.to(device)
         labels = torch.stack(labels)
         labels = labels.squeeze(1)
         # labels = labels.to(device)
         outputs = demdetect(points)
+
         labels = torch.max(labels, 1)[1]
 
-        # if outputs.size() == 3:
-        #     outputs = outputs.reshape(3,1,3,1)
         outputs = outputs.flatten(start_dim=1)
 
         _, predictions = outputs.max(1)
