@@ -19,7 +19,7 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(batch_size,2,45)
+        self.first_layer = torch.nn.Conv1d(batch_size,2,1)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
@@ -63,7 +63,7 @@ normaliserAlg = normaliser.hal()
 window = 2
 batch_size = 1
 learning_rate = 0.001
-no_epochs = 10
+no_epochs = 1
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
@@ -106,14 +106,13 @@ for epochs in range(no_epochs):
 
         outputs = demdetect(points)
         outputs = outputs.flatten(start_dim=1)
-        print(outputs, labels)
+        # print(outputs.shape, labels.shape, labels)
         labels = torch.max(labels, 1)[1]
-
-        print(outputs, labels)
-        print(outputs.shape, labels.shape)
-        # loss = criterion(outputs, labels)
-        if i == 0:
-            break
+        # print(outputs, labels)
+        # if i == 0:
+        #     break
+        loss = criterion(outputs, labels)
+        
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
