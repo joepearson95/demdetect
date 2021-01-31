@@ -54,7 +54,7 @@ demdataset = DemDataset(normaliserAlg)
 trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 
 # Hyper Param
-input_size = 90
+input_size = 45
 sequence_length = 1
 batch_size = 5
 hidden_size = 3

@@ -19,7 +19,7 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(batch_size,2,1)
+        self.first_layer = torch.nn.Conv1d(5,2,1)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
@@ -60,10 +60,11 @@ normaliser = normalise.Normalise(csv_file)
 normaliserAlg = normaliser.hal()
 
 # Params
+keypoints = 45
 window = 2
-batch_size = 1
+batch_size = 5
 learning_rate = 0.001
-no_epochs = 1
+no_epochs = 10
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
@@ -71,6 +72,7 @@ t_num_samples = 0
 train_err = []
 test_err = []
 
+# Dynamically create the .npy file
 # if os.path.exists("data.npy"):
 #     os.remove("data.npy")
 #     frames = []
@@ -104,43 +106,54 @@ for epochs in range(no_epochs):
         labels = labels.squeeze(1)
         labels = labels.to(device)
 
-        outputs = demdetect(points)
-        outputs = outputs.flatten(start_dim=1)
-        # print(outputs.shape, labels.shape, labels)
-        labels = torch.max(labels, 1)[1]
-        # print(outputs, labels)
-        # if i == 0:
-        #     break
-        loss = criterion(outputs, labels)
-        
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        # mis-match problems, manual solution. 
+        if points.shape == (window, batch_size, keypoints):
+            outputs = demdetect(points)
+            outputs = outputs.flatten(start_dim=1)
+    
+            if batch_size != 1:
+                labels = torch.max(labels, 2)[1]
+                labels = labels.max(1).values
+            else:
+                labels = torch.max(labels, 1)[1]
 
-        _, predictions = outputs.max(1)
-        num_correct += (predictions ==  labels).sum()
-        num_samples += predictions.size(0)
-        running_loss += loss.item()
+            loss = criterion(outputs, labels)
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            _, predictions = outputs.max(1)
+            num_correct += (predictions ==  labels).sum()
+            num_samples += predictions.size(0)
+            running_loss += loss.item()
     train_acc = float(num_correct) / float(num_samples) * 100
     train_err.append((train_acc - 100) * -1)
-    # begin training
+    # begin testing
     demdetect.eval()
     for (points, labels) in testing_loader:
         points = torch.stack(points).float()
             
-        # points = points.to(device)
+        points = points.to(device)
         labels = torch.stack(labels)
         labels = labels.squeeze(1)
-        # labels = labels.to(device)
-        outputs = demdetect(points)
+        labels = labels.to(device)
 
-        labels = torch.max(labels, 1)[1]
+        if points.shape == (window, batch_size, keypoints):
+            outputs = demdetect(points)
+            outputs = outputs.flatten(start_dim=1)
+            
+            if batch_size != 1:
+                if labels.ndim == 3:
+                    labels = torch.max(labels, 2)[1]
+                    labels = labels.max(1).values
+            else:
+                labels = torch.max(labels, 1)[1]
 
-        outputs = outputs.flatten(start_dim=1)
-
-        _, predictions = outputs.max(1)
-        t_num_correct += (predictions == labels).sum()
-        t_num_samples += predictions.size(0)
+            _, predictions = outputs.max(1)
+            
+            t_num_correct += (predictions == labels).sum()
+            t_num_samples += predictions.size(0)
     test_acc = float(t_num_correct) / float(t_num_samples) * 100
     test_err.append((test_acc - 100) * -1)
     print(f'[Epoch {epochs + 1}/{no_epochs}] Epoch Loss: {running_loss / len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {train_acc:.2f}%')
