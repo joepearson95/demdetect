@@ -19,11 +19,11 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(3,2,1)
+        self.first_layer = torch.nn.Conv1d(5,1,1)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
-            in_channels=2,
+            in_channels=1,
             out_channels=2,
             kernel_size=1
         )
@@ -61,8 +61,8 @@ normaliserAlg = normaliser.hal()
 
 # Params
 keypoints = 45
-window = 2
-batch_size = 3
+window = 1
+batch_size = 5
 learning_rate = 0.001
 no_epochs = 10
 num_correct = 0
@@ -105,15 +105,16 @@ for epochs in range(no_epochs):
         labels = torch.stack(labels)
         labels = labels.squeeze(1)
         labels = labels.to(device)
-        # print(points, points.shape)
+
         # mis-match problems, manual solution. 
         if points.shape == (window, batch_size, keypoints):
             outputs = demdetect(points)
-            outputs = outputs.flatten(start_dim=1)
-
+            print(outputs, outputs.shape)
+            # outputs = outputs.flatten(start_dim=1)
+    
             if batch_size != 1:
                 labels = torch.max(labels, 2)[1]
-                labels = labels.max(1).values
+                # labels = labels.max(1).values
             else:
                 labels = torch.max(labels, 1)[1]
 
@@ -127,8 +128,6 @@ for epochs in range(no_epochs):
             num_correct += (predictions ==  labels).sum()
             num_samples += predictions.size(0)
             running_loss += loss.item()
-        else:
-            print("no")
     train_acc = float(num_correct) / float(num_samples) * 100
     train_err.append((train_acc - 100) * -1)
     # begin testing
