@@ -19,7 +19,7 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(5,2,1)
+        self.first_layer = torch.nn.Conv1d(3,2,1)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
@@ -62,7 +62,7 @@ normaliserAlg = normaliser.hal()
 # Params
 keypoints = 45
 window = 2
-batch_size = 5
+batch_size = 3
 learning_rate = 0.001
 no_epochs = 10
 num_correct = 0
@@ -73,15 +73,15 @@ train_err = []
 test_err = []
 
 # Dynamically create the .npy file
-# if os.path.exists("data.npy"):
-#     os.remove("data.npy")
-#     frames = []
-#     for i in range(len(normaliserAlg) - window):
-#         if i == 0:
-#             frames.append(normaliserAlg.iloc[i:i+window].to_numpy())
-#         else:
-#             frames.append(normaliserAlg.iloc[i+1:(i+1)+window].to_numpy())
-#     save('data.npy', frames)
+if os.path.exists("data.npy"):
+    os.remove("data.npy")
+    frames = []
+    for i in range(len(normaliserAlg) - window):
+        if i == 0:
+            frames.append(normaliserAlg.iloc[i:i+window].to_numpy())
+        else:
+            frames.append(normaliserAlg.iloc[i+1:(i+1)+window].to_numpy())
+    save('data.npy', frames)
 data = load('data.npy', allow_pickle=True)
 print("Data remove before saved and loaded.")
 
@@ -105,12 +105,12 @@ for epochs in range(no_epochs):
         labels = torch.stack(labels)
         labels = labels.squeeze(1)
         labels = labels.to(device)
-
+        # print(points, points.shape)
         # mis-match problems, manual solution. 
         if points.shape == (window, batch_size, keypoints):
             outputs = demdetect(points)
             outputs = outputs.flatten(start_dim=1)
-    
+
             if batch_size != 1:
                 labels = torch.max(labels, 2)[1]
                 labels = labels.max(1).values
@@ -127,35 +127,37 @@ for epochs in range(no_epochs):
             num_correct += (predictions ==  labels).sum()
             num_samples += predictions.size(0)
             running_loss += loss.item()
+        else:
+            print("no")
     train_acc = float(num_correct) / float(num_samples) * 100
     train_err.append((train_acc - 100) * -1)
     # begin testing
-    demdetect.eval()
-    for (points, labels) in testing_loader:
-        points = torch.stack(points).float()
+    # demdetect.eval()
+    # for (points, labels) in testing_loader:
+    #     points = torch.stack(points).float()
             
-        points = points.to(device)
-        labels = torch.stack(labels)
-        labels = labels.squeeze(1)
-        labels = labels.to(device)
+    #     points = points.to(device)
+    #     labels = torch.stack(labels)
+    #     labels = labels.squeeze(1)
+    #     labels = labels.to(device)
 
-        if points.shape == (window, batch_size, keypoints):
-            outputs = demdetect(points)
-            outputs = outputs.flatten(start_dim=1)
+    #     if points.shape == (window, batch_size, keypoints):
+    #         outputs = demdetect(points)
+    #         outputs = outputs.flatten(start_dim=1)
             
-            if batch_size != 1:
-                if labels.ndim == 3:
-                    labels = torch.max(labels, 2)[1]
-                    labels = labels.max(1).values
-            else:
-                labels = torch.max(labels, 1)[1]
+    #         if batch_size != 1:
+    #             if labels.ndim == 3:
+    #                 labels = torch.max(labels, 2)[1]
+    #                 labels = labels.max(1).values
+    #         else:
+    #             labels = torch.max(labels, 1)[1]
 
-            _, predictions = outputs.max(1)
+    #         _, predictions = outputs.max(1)
             
-            t_num_correct += (predictions == labels).sum()
-            t_num_samples += predictions.size(0)
-    test_acc = float(t_num_correct) / float(t_num_samples) * 100
-    test_err.append((test_acc - 100) * -1)
+    #         t_num_correct += (predictions == labels).sum()
+    #         t_num_samples += predictions.size(0)
+    # test_acc = float(t_num_correct) / float(t_num_samples) * 100
+    # test_err.append((test_acc - 100) * -1)
     print(f'[Epoch {epochs + 1}/{no_epochs}] Epoch Loss: {running_loss / len(training_loader):.3f} | Got {num_correct} of {num_samples} with accuracy {train_acc:.2f}%')
-    print(f'[Epoch {epochs + 1}/{no_epochs}] | Test: Got {t_num_correct} of {t_num_samples} with accuracy {test_acc:.2f}%')
+    # print(f'[Epoch {epochs + 1}/{no_epochs}] | Test: Got {t_num_correct} of {t_num_samples} with accuracy {test_acc:.2f}%')
 print('Finished Training')
