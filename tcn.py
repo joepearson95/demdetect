@@ -19,15 +19,15 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 class TCN(nn.Module):
     def __init__(self):
         super(TCN, self).__init__()
-        self.first_layer = torch.nn.Conv1d(5,1,1)
+        self.first_layer = torch.nn.Conv1d(5,5,1)
 
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
-            in_channels=1,
-            out_channels=2,
+            in_channels=5,
+            out_channels=3,
             kernel_size=1
         )
-        self.uplayer1 = torch.nn.Conv1d(2,3,1)
+        self.uplayer1 = torch.nn.Conv1d(3,3,1)
 
     def forward(self, x):
         encode1 = F.relu(self.first_layer(x))
@@ -47,12 +47,13 @@ class DemDataset(Dataset):
 
     def __getitem__(self, idx):
         self.x = self.data[idx]
-        frames_points = []
-        frames_labels = []
+        # return self.x
+        frames = []
+        labels = []
         for i in self.x:
-            frames_points.append(i[:-3])
-            frames_labels.append(i[-3:])
-        return frames_points, frames_labels
+            frames.append(i[:-3])
+            labels.append(i[-3:])
+        return np.stack(frames), np.stack(labels).flatten()
 
 # Get the dataset ready
 csv_file = '../demcare1_ingest_dataset.csv'
@@ -61,10 +62,10 @@ normaliserAlg = normaliser.hal()
 
 # Params
 keypoints = 45
-window = 1
+window = 5
 batch_size = 5
 learning_rate = 0.001
-no_epochs = 10
+no_epochs = 60
 num_correct = 0
 num_samples = 0
 t_num_correct = 0
@@ -98,36 +99,28 @@ optimizer = optim.Adam(demdetect.parameters(), lr=learning_rate)
 for epochs in range(no_epochs):
     running_loss = 0.0
     demdetect.train()
-    for i, (points, labels) in enumerate(training_loader):
-        points = torch.stack(points).float()
-        points = points.to(device)
+    for i, (frames, labels) in enumerate(training_loader):
+        # pass frames/labels to device and gather the max from labels
+        frames = frames.float()
+        points = frames.to(device)
 
-        labels = torch.stack(labels)
-        labels = labels.squeeze(1)
         labels = labels.to(device)
+        labels = torch.max(labels, 1)[1]
+        
+        # alter the size due to problems caused otherwise
+        outputs = demdetect(points)
+        outputs = outputs.view(outputs.size(0), 3*45)
+        
+        loss = criterion(outputs, labels)
 
-        # mis-match problems, manual solution. 
-        if points.shape == (window, batch_size, keypoints):
-            outputs = demdetect(points)
-            print(outputs, outputs.shape)
-            # outputs = outputs.flatten(start_dim=1)
-    
-            if batch_size != 1:
-                labels = torch.max(labels, 2)[1]
-                # labels = labels.max(1).values
-            else:
-                labels = torch.max(labels, 1)[1]
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-            loss = criterion(outputs, labels)
-            
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            _, predictions = outputs.max(1)
-            num_correct += (predictions ==  labels).sum()
-            num_samples += predictions.size(0)
-            running_loss += loss.item()
+        _, predictions = outputs.max(1)
+        num_correct += (predictions ==  labels).sum()
+        num_samples += predictions.size(0)
+        running_loss += loss.item()
     train_acc = float(num_correct) / float(num_samples) * 100
     train_err.append((train_acc - 100) * -1)
     # begin testing
