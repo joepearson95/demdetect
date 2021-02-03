@@ -56,7 +56,7 @@ trainset, testset = train_test_split(demdataset, test_size=0.2, shuffle=False)
 # Hyper Param
 input_size = 45
 sequence_length = 1
-batch_size = 5
+batch_size = 1
 hidden_size = 3
 num_layers = 1
 num_classes = 3
@@ -86,6 +86,10 @@ for epochs in range(no_epochs):
         points = points.unsqueeze_(1)
         labels = labels.to(device)
         outputs = demdetect(points)
+        labels = torch.max(labels, 1)[1]
+        print(outputs, outputs.shape)
+        print(labels, labels.shape)
+        break
         loss = criterion(outputs, torch.max(labels, 1)[1])
         optimizer.zero_grad()
         loss.backward()
