@@ -1,3 +1,4 @@
+# OLD FILE COMPARED TO 'construct_dataset.py'
 # Some basic setup:
 # Detectron2 utils
 from detectron2 import model_zoo
