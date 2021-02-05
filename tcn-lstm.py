@@ -39,8 +39,8 @@ class Model(nn.Module):
         )
 
         self.out = torch.nn.Conv1d(10,10,1)
-        self.lstm1 = nn.LSTM(1,10,1)
-        self.fc1 = nn.Linear(10,3)
+        self.lstm1 = nn.LSTM(1,5,1)
+        self.fc1 = nn.Linear(5,3)
 
     def forward(self, x):
         encode1 = F.relu(self.first_layer(x))
