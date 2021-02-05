@@ -24,22 +24,34 @@ class TCN(nn.Module):
     def __init__(self, sequence_length,batch_size,input_size):
         super(TCN, self).__init__()
         self.first_layer = torch.nn.Conv1d(sequence_length,batch_size,input_size)
-
+        self.second_layer = torch.nn.Conv1d(batch_size, 2, 1)
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
-            in_channels=batch_size,
-            out_channels=3,
+            in_channels=2,
+            out_channels=5,
             kernel_size=1
         )
-        self.uplayer1 = torch.nn.Conv1d(3,3,1)
+        self.uplayer1 = torch.nn.Conv1d(5,5,1)
+
+        self.up_samp2 = torch.nn.ConvTranspose1d(
+            in_channels=5,
+            out_channels=10,
+            kernel_size=1
+        )
+
+        self.out = torch.nn.Conv1d(10,3,1)
 
     def forward(self, x):
         encode1 = F.relu(self.first_layer(x))
         pooled = F.max_pool1d(encode1,1)
+        encode2 = F.relu(self.second_layer(pooled))
+        pooled2 = F.max_pool1d(encode2, 1)
+
         # decoder
-        x = self.up_samp(pooled)
+        x = self.up_samp(pooled2)
         x = F.relu(self.uplayer1(x))
-        x = F.softmax(x, dim=1)
+        x = self.up_samp2(x)
+        x = F.softmax(F.relu(self.out(x)), dim=1)
         return x
 
 data=np.load('normalized_data.npy')
@@ -87,9 +99,9 @@ test_loader = Data.DataLoader(
     num_workers=1,              
 )
 
-input_size = 34
+input_size = 45
 sequence_length = 10
-batch_size = 1
+batch_size = 10
 no_epochs = 100
 lr_rate = 0.001
 

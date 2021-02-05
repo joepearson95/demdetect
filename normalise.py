@@ -56,7 +56,7 @@ def hal():
 		normalized_data.append(kf)
 	return normalized_data
 
-n_data=hindawi()
+n_data=hal()
 if os.path.exists("normalized_data.py"):
 	os.remove("normalized_data.py")
 

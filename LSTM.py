@@ -50,7 +50,7 @@ for i in range(0,len(labels1)):
     labels.append(label)
 labels=np.array(labels)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-BATCH_SIZE = 5
+batch_size = 5
 np.random.seed(1)
 test_ratio=0.3
 

@@ -23,8 +23,8 @@ class Model(nn.Module):
     def __init__(self,sequence_length, batch_size, input_size):
         super(Model, self).__init__()
         self.conv1 = nn.Conv1d(sequence_length, batch_size, input_size)
-        self.lstm1 = nn.LSTM(1,3, 1)
-        self.fc1 = nn.Linear(3, 3)
+        self.lstm1 = nn.LSTM(1,25, 1)
+        self.fc1 = nn.Linear(25, 3)
 
     def forward(self, x):
         x = F.relu((self.conv1(x)))
