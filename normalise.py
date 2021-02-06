@@ -49,10 +49,8 @@ def hal():
 						np.linalg.norm(reordered[2*i+2][j] - reordered[(2*i+1)+2][j]) +
 						np.linalg.norm(reordered[2*i-2][j] - reordered[(2*i+1)-2][j]) - 2 * n
 					)
-					kf.append(n)
-					kf.append(velocity)
-					kf.append(acceleration)
-		kf = np.reshape(np.asarray(kf), (45,10))
+					kf.append((n, velocity, acceleration))
+		kf = np.reshape(np.asarray(kf), (3*15,10))
 		normalized_data.append(kf)
 	return normalized_data
 
@@ -61,7 +59,8 @@ if os.path.exists("normalized_data.py"):
 	os.remove("normalized_data.py")
 
 np.save('normalized_data.npy',n_data)
-# data = np.load('normalized_data.npy')
+data = np.load('normalized_data.npy')
+print(data.shape)
 # pdb.set_trace()
 
 

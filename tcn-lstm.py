@@ -20,33 +20,33 @@ def train_test_split(data,labels,test_ratio):
     return train_data,train_labels,test_data,test_labels
 
 class Model(nn.Module):
-    def __init__(self, sequence_length, batch_size, input_size):
+    def __init__(self, sequence_length,batch_size,input_size):
         super(Model, self).__init__()
         self.first_layer = torch.nn.Conv1d(sequence_length,batch_size,input_size)
-        self.second_layer = torch.nn.Conv1d(batch_size, 2, 1)
+        self.second_layer = torch.nn.Conv1d(batch_size, 5, 1)
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
-            in_channels=2,
-            out_channels=5,
-            kernel_size=1
-        )
-        self.uplayer1 = torch.nn.Conv1d(5,5,1)
-
-        self.up_samp2 = torch.nn.ConvTranspose1d(
             in_channels=5,
             out_channels=10,
             kernel_size=1
         )
+        self.uplayer1 = torch.nn.Conv1d(10,10,1)
 
-        self.out = torch.nn.Conv1d(10,10,1)
-        self.lstm1 = nn.LSTM(1,5,1)
-        self.fc1 = nn.Linear(5,3)
+        self.up_samp2 = torch.nn.ConvTranspose1d(
+            in_channels=10,
+            out_channels=20,
+            kernel_size=1
+        )
+
+        self.out = torch.nn.Conv1d(20,20,1)
+        self.lstm1 = nn.LSTM(1,3,1)
+        self.fc1 = nn.Linear(3,3)
 
     def forward(self, x):
         encode1 = F.relu(self.first_layer(x))
         pooled = F.max_pool1d(encode1,1)
         encode2 = F.relu(self.second_layer(pooled))
-        pooled2 = F.max_pool1d(encode2, 1)
+        pooled2 = F.max_pool1d(encode2,1)
 
         # decoder
         x = self.up_samp(pooled2)
@@ -72,7 +72,7 @@ for i in range(0,len(labels1)):
     labels.append(label)
 labels=np.array(labels)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-BATCH_SIZE = 5
+BATCH_SIZE = 20
 np.random.seed(1)
 test_ratio=0.3
 
@@ -105,7 +105,7 @@ test_loader = Data.DataLoader(
 
 input_size = 45
 sequence_length = 10
-batch_size = 10
+batch_size = 20
 no_epochs = 100
 lr_rate = 0.001
 
