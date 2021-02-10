@@ -79,8 +79,8 @@ test_loader = Data.DataLoader(
     num_workers=1,              
 )
 
-input_size = 45
-sequence_length = 10
+input_size = 102
+sequence_length = 6
 batch_size = 5
 no_epochs = 100
 lr_rate = 0.001

@@ -69,19 +69,19 @@ torch_test_dataset = Data.TensorDataset(test_data,test_labels)
 
 train_loader = Data.DataLoader(
     dataset=torch_train_dataset,     
-    batch_size=BATCH_SIZE,      
+    batch_size=batch_size,      
     shuffle=True,               
     num_workers=1,              
 )
 
 test_loader = Data.DataLoader(
     dataset=torch_test_dataset,     
-    batch_size=BATCH_SIZE,      
+    batch_size=batch_size,      
     shuffle=True,               
     num_workers=1,              
 )
 
-input_size = 45
+input_size = 102
 sequence_length = 10
 batch_size = 5
 hidden_size = 3

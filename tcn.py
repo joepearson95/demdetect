@@ -24,10 +24,10 @@ class TCN(nn.Module):
     def __init__(self, sequence_length,batch_size,input_size):
         super(TCN, self).__init__()
         self.first_layer = torch.nn.Conv1d(sequence_length,batch_size,input_size)
-        self.second_layer = torch.nn.Conv1d(batch_size, 5, 1)
+        self.second_layer = torch.nn.Conv1d(batch_size, 3, 1)
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
-            in_channels=5,
+            in_channels=3,
             out_channels=12,
             kernel_size=1
         )
@@ -99,8 +99,8 @@ test_loader = Data.DataLoader(
     num_workers=1,              
 )
 
-input_size = 45
-sequence_length = 10
+input_size = 102
+sequence_length = 6
 batch_size = 20
 no_epochs = 100
 lr_rate = 0.001
