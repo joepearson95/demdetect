@@ -82,7 +82,7 @@ test_loader = Data.DataLoader(
 )
 
 input_size = 102
-sequence_length = 10
+sequence_length = 6
 batch_size = 5
 hidden_size = 3
 num_layers = 1
@@ -92,7 +92,6 @@ lr_rate = 0.001
 
 # Create the dataloader
 demdetect = LSTM(input_size, hidden_size, num_layers, num_classes).to(device)
-
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=lr_rate)
 
