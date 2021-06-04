@@ -18,6 +18,8 @@ def train_test_split(data,labels,test_ratio):
     test_labels=labels[test_indices]
     return train_data,train_labels,test_data,test_labels
 
+# [Epoch 10/100] Epoch Loss: 0.361 | Got 35692 of 40792 with accuracy 87.50%
+# [Epoch 10/100] | Test: Got 15213 of 17482 with accuracy 87.02%
 
 class LSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
@@ -36,9 +38,9 @@ class LSTM(nn.Module):
         out=self.fc(out)
         return out
 
-data=np.load('normalized_data.npy')
+data=np.load('normalized_data_v2.npy')
 data=data.reshape((data.shape[0],data.shape[2],data.shape[1]))
-labels1=np.load('labels.npy')
+labels1=np.load('labels_v2.npy')
 labels=[]
 for i in range(0,len(labels1)):
     if labels1[i][0]==1:
@@ -47,10 +49,24 @@ for i in range(0,len(labels1)):
         label=1
     if labels1[i][2]==1:
         label=2
+    if labels1[i][3]==1:
+        label=3
+    if labels1[i][4]==1:
+        label=4
+    if labels1[i][5]==1:
+        label=5
+    if labels1[i][6]==1:
+        label=6
+    if labels1[i][7]==1:
+        label=7
+    if labels1[i][8]==1:
+        label=8
+    if labels1[i][9]==1:
+        label=9
     labels.append(label)
 labels=np.array(labels)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-batch_size = 5
+batch_size = 10
 np.random.seed(1)
 test_ratio=0.3
 
@@ -83,10 +99,10 @@ test_loader = Data.DataLoader(
 
 input_size = 102
 sequence_length = 6
-batch_size = 5
-hidden_size = 3
-num_layers = 1
-num_classes = 3
+batch_size = 10
+hidden_size = 30
+num_layers = 2
+num_classes = 10
 no_epochs = 100
 lr_rate = 0.001
 

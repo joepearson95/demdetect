@@ -3,11 +3,14 @@ import pdb
 import os
 
 def hindawi1():
-	dataset=np.load('dataset.npy')
-	classes=np.load('labels.npy')
+	dataset=np.load('dataset_v2 (mini check).npy')
+	classes=np.load('labels_v2 (mini check).npy')
 	normalized_data = []
 	dataset_len = len(dataset)
+	counthin = 0
 	for x in range(dataset_len):
+		counthin += 1
+		print(str(counthin)+"/"+str(dataset_len))
 		neck_joint=[(dataset[x][5*2]+dataset[x][6*2])/2,(dataset[x][5*2+1]+dataset[x][6*2+1])/2]
 		hip_middle =[(dataset[x][11*2]+dataset[x][12*2])/2,(dataset[x][11*2+1]+dataset[x][12*2+1])/2]
 		torso_middle =[(neck_joint[0] + hip_middle[0]) / 2, (neck_joint[1] + hip_middle[1]) / 2]
@@ -54,11 +57,11 @@ def hindawi1():
 	return normalized_data
 
 n_data=hindawi1()
-if os.path.exists("normalized_data.py"):
-	os.remove("normalized_data.py")
+if os.path.exists("normalized_data_v2 (mini check).py"):
+	os.remove("normalized_data_v2 (mini check).py")
 
-np.save('normalized_data.npy',n_data)
-data = np.load('normalized_data.npy')
+np.save('normalized_data_v2 (mini check).npy',n_data)
+data = np.load('normalized_data_v2 (mini check).npy')
 print(data.shape)
 # pdb.set_trace()
 

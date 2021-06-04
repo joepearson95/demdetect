@@ -23,20 +23,22 @@ class Model(nn.Module):
     def __init__(self,sequence_length, batch_size, input_size):
         super(Model, self).__init__()
         self.conv1 = nn.Conv1d(sequence_length, batch_size, input_size)
-        self.lstm1 = nn.LSTM(1,25, 1)
-        self.fc1 = nn.Linear(25, 3)
+        self.conv2 = nn.Conv1d(batch_size, 30, 1)
+        self.lstm1 = nn.LSTM(1,30, 2)
+        self.fc1 = nn.Linear(30, 10)
 
     def forward(self, x):
         x = F.relu((self.conv1(x)))
+        x = F.relu((self.conv2(x)))
         x, _ = self.lstm1(x)
         x = x[:, -1, :]
         x = self.fc1(x)
         return x
 
 
-data=np.load('normalized_data.npy')
+data=np.load('normalized_data_v2.npy')
 data=data.reshape((data.shape[0],data.shape[2],data.shape[1]))
-labels1=np.load('labels.npy')
+labels1=np.load('labels_v2.npy')
 labels=[]
 for i in range(0,len(labels1)):
     if labels1[i][0]==1:
@@ -45,10 +47,24 @@ for i in range(0,len(labels1)):
         label=1
     if labels1[i][2]==1:
         label=2
+    if labels1[i][3]==1:
+        label=3
+    if labels1[i][4]==1:
+        label=4
+    if labels1[i][5]==1:
+        label=5
+    if labels1[i][6]==1:
+        label=6
+    if labels1[i][7]==1:
+        label=7
+    if labels1[i][8]==1:
+        label=8
+    if labels1[i][9]==1:
+        label=9
     labels.append(label)
 labels=np.array(labels)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-BATCH_SIZE = 5
+BATCH_SIZE = 10
 np.random.seed(1)
 test_ratio=0.3
 
@@ -87,7 +103,7 @@ lr_rate = 0.001
 
 # Create the dataloader
 demdetect = Model(sequence_length, batch_size, input_size).to(device)
-
+print(demdetect)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=lr_rate)
 
@@ -110,6 +126,7 @@ for epochs in range(no_epochs):
         labels = labels.to(device)
         labels=labels.long()
         outputs = demdetect(points)
+        # print(labels)
         loss = criterion(outputs, labels)
         optimizer.zero_grad()
         loss.backward()

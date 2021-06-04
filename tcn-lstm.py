@@ -7,6 +7,9 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
+# [Epoch 100/100] Epoch Loss: 0.451 | Got 34231 of 40806 with accuracy 83.89%
+# [Epoch 100/100] | Test: Got 14489 of 17487 with accuracy 82.86%
+
 def train_test_split(data,labels,test_ratio):
     shuffled_indices = np.random.permutation(len(data))
     test_set_size = int(int(len(data)) * test_ratio)
@@ -22,11 +25,11 @@ def train_test_split(data,labels,test_ratio):
 class Model(nn.Module):
     def __init__(self, sequence_length,batch_size,input_size):
         super(Model, self).__init__()
-        self.first_layer = torch.nn.Conv1d(sequence_length,batch_size,input_size)
-        self.second_layer = torch.nn.Conv1d(batch_size, 3, 1)
+        self.first_layer = torch.nn.Conv1d(102,10,1)
+        self.second_layer = torch.nn.Conv1d(10, 5, 1)
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
-            in_channels=3,
+            in_channels=5,
             out_channels=10,
             kernel_size=1
         )
@@ -34,33 +37,34 @@ class Model(nn.Module):
 
         self.up_samp2 = torch.nn.ConvTranspose1d(
             in_channels=10,
-            out_channels=20,
+            out_channels=15,
             kernel_size=1
         )
 
-        self.out = torch.nn.Conv1d(20,20,1)
-        self.lstm1 = nn.LSTM(1,3,1)
-        self.fc1 = nn.Linear(3,3)
+        self.out = torch.nn.Conv1d(15,30,1)
+        self.lstm1 = nn.LSTM(6,30,2)
+        self.fc1 = nn.Linear(30,10)
 
     def forward(self, x):
         encode1 = F.relu(self.first_layer(x))
         pooled = F.max_pool1d(encode1,1)
         encode2 = F.relu(self.second_layer(pooled))
-        pooled2 = F.max_pool1d(encode2,1)
-
+        pooled2 = F.max_pool1d(encode2, 1)
+        
         # decoder
         x = self.up_samp(pooled2)
         x = F.relu(self.uplayer1(x))
         x = self.up_samp2(x)
+        # x= x.view(x.size(0), -1, 900)
         x = F.softmax(F.relu(self.out(x)), dim=1)
         x, _ = self.lstm1(x)
         x = x[:, -1, :]
         x = self.fc1(x)
         return x
 
-data=np.load('normalized_data.npy')
-data=data.reshape((data.shape[0],data.shape[2],data.shape[1]))
-labels1=np.load('labels.npy')
+data=np.load('normalized_data_v2.npy')
+# data=data.reshape((data.shape[0],data.shape[2],data.shape[1]))
+labels1=np.load('labels_v2.npy')
 labels=[]
 for i in range(0,len(labels1)):
     if labels1[i][0]==1:
@@ -69,10 +73,24 @@ for i in range(0,len(labels1)):
         label=1
     if labels1[i][2]==1:
         label=2
+    if labels1[i][3]==1:
+        label=3
+    if labels1[i][4]==1:
+        label=4
+    if labels1[i][5]==1:
+        label=5
+    if labels1[i][6]==1:
+        label=6
+    if labels1[i][7]==1:
+        label=7
+    if labels1[i][8]==1:
+        label=8
+    if labels1[i][9]==1:
+        label=9
     labels.append(label)
 labels=np.array(labels)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-BATCH_SIZE = 20
+BATCH_SIZE = 10
 np.random.seed(1)
 test_ratio=0.3
 
@@ -105,13 +123,13 @@ test_loader = Data.DataLoader(
 
 input_size = 102
 sequence_length = 6
-batch_size = 20
+batch_size = 5
 no_epochs = 100
 lr_rate = 0.001
 
 # Create the dataloader
 demdetect = Model(sequence_length, batch_size, input_size).to(device)
-
+print(demdetect)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=lr_rate)
 

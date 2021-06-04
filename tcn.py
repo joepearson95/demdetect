@@ -21,6 +21,9 @@ def train_test_split(data,labels,test_ratio):
     test_labels=labels[test_indices]
     return train_data,train_labels,test_data,test_labels
 
+#Epoch 100/100] Epoch Loss: 0.466 | Got 34222 of 40792 with accuracy 83.89%
+#[Epoch 100/100] | Test: Got 14769 of 17482 with accuracy 84.48%
+
 class TCN(nn.Module):
     def __init__(self, sequence_length,batch_size,input_size):
         super(TCN, self).__init__()
@@ -29,19 +32,19 @@ class TCN(nn.Module):
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
             in_channels=5,
-            out_channels=12,
+            out_channels=15,
             kernel_size=1
         )
-        self.uplayer1 = torch.nn.Conv1d(12,12,1)
+        self.uplayer1 = torch.nn.Conv1d(15,15,1)
 
         self.up_samp2 = torch.nn.ConvTranspose1d(
-            in_channels=12,
+            in_channels=15,
             out_channels=20,
             kernel_size=1
         )
 
-        self.out = torch.nn.Conv1d(20,3,1)
-        self.fc = nn.Linear(120,3)
+        self.out = torch.nn.Conv1d(20,10,1)
+        self.fc = nn.Linear(120,10)
     def forward(self, x):
         encode1 = F.relu(self.first_layer(x))
         pooled = F.max_pool1d(encode1,1)
@@ -58,9 +61,9 @@ class TCN(nn.Module):
         #pdb.set_trace()
         return out
 
-data=np.load('normalized_data.npy')
+data=np.load('normalized_data_v2.npy')
 #data=data.reshape((data.shape[0],data.shape[2],data.shape[1]))
-labels1=np.load('labels.npy')
+labels1=np.load('labels_v2.npy')
 labels=[]
 for i in range(0,len(labels1)):
     if labels1[i][0]==1:
@@ -69,6 +72,20 @@ for i in range(0,len(labels1)):
         label=1
     if labels1[i][2]==1:
         label=2
+    if labels1[i][3]==1:
+        label=3
+    if labels1[i][4]==1:
+        label=4
+    if labels1[i][5]==1:
+        label=5
+    if labels1[i][6]==1:
+        label=6
+    if labels1[i][7]==1:
+        label=7
+    if labels1[i][8]==1:
+        label=8
+    if labels1[i][9]==1:
+        label=9
     labels.append(label)
 labels=np.array(labels)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -110,7 +127,7 @@ lr_rate = 0.001
 
 # Create the dataloader
 demdetect = TCN(sequence_length,batch_size,input_size).to(device)
-
+print(demdetect)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(demdetect.parameters(), lr=lr_rate)
 
