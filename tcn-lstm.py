@@ -25,8 +25,8 @@ def train_test_split(data,labels,test_ratio):
 class Model(nn.Module):
     def __init__(self, sequence_length,batch_size,input_size):
         super(Model, self).__init__()
-        self.first_layer = torch.nn.Conv1d(102,10,1)
-        self.second_layer = torch.nn.Conv1d(10, 5, 1)
+        self.first_layer = torch.nn.Conv1d(sequence_length, batch_size, input_size)
+        self.second_layer = torch.nn.Conv1d(batch_size, 5, 1)
         # Upsampling
         self.up_samp = torch.nn.ConvTranspose1d(
             in_channels=5,
@@ -42,7 +42,7 @@ class Model(nn.Module):
         )
 
         self.out = torch.nn.Conv1d(15,30,1)
-        self.lstm1 = nn.LSTM(6,30,2)
+        self.lstm1 = nn.LSTM(1,30,2, batch_first=True)
         self.fc1 = nn.Linear(30,10)
 
     def forward(self, x):
@@ -55,7 +55,6 @@ class Model(nn.Module):
         x = self.up_samp(pooled2)
         x = F.relu(self.uplayer1(x))
         x = self.up_samp2(x)
-        # x= x.view(x.size(0), -1, 900)
         x = F.softmax(F.relu(self.out(x)), dim=1)
         x, _ = self.lstm1(x)
         x = x[:, -1, :]
@@ -63,7 +62,7 @@ class Model(nn.Module):
         return x
 
 data=np.load('normalized_data_v2.npy')
-# data=data.reshape((data.shape[0],data.shape[2],data.shape[1]))
+data=data.reshape((data.shape[0],data.shape[2],data.shape[1]))
 labels1=np.load('labels_v2.npy')
 labels=[]
 for i in range(0,len(labels1)):
@@ -123,7 +122,7 @@ test_loader = Data.DataLoader(
 
 input_size = 102
 sequence_length = 6
-batch_size = 5
+batch_size = 10
 no_epochs = 100
 lr_rate = 0.001
 

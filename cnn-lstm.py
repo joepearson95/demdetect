@@ -24,7 +24,7 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.conv1 = nn.Conv1d(sequence_length, batch_size, input_size)
         self.conv2 = nn.Conv1d(batch_size, 30, 1)
-        self.lstm1 = nn.LSTM(1,30, 2)
+        self.lstm1 = nn.LSTM(1,30, 2, batch_first=True)
         self.fc1 = nn.Linear(30, 10)
 
     def forward(self, x):
